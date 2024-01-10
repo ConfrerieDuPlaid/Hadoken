@@ -18,8 +18,8 @@ MOVES = {
 }
 ATTACKS = [ACTION_PUNCH, ACTION_KICK, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_LOW_PUNCH, ACTION_HIGH_PUNCH]
 
-REWARD_WIN = 1000
-REWARD_LOSE = -1000
+REWARD_WIN = 2000
+REWARD_LOSE = -2000
 REWARD_HIT = 10
 REWARD_GET_HIT = -40
 REWARD_MOVE = -5
@@ -68,22 +68,22 @@ class Environment:
             KEN: (self.distance_between_players(), ORIENTATION_LEFT),
         }
 
-    def do(self, player, action):  # retourne tuple (reward, ∂HP, state)
+    def do(self, player_name, action):  # retourne tuple (reward, ∂HP, state)
         reward = 0
         damage = 0
         if action in MOVES:
-            reward += self.update_player_position(player, action)
+            reward += self.update_player_position(player_name, action)
             reward += REWARD_MOVE
 
         if action in ATTACKS:
-            if self.is_within_range(player, action):
+            if self.is_within_range(player_name, action):
                 reward += REWARD_HIT
                 damage = 10
                 # todo range/dodge/etc.
             else:
                 reward -= REWARD_HIT
 
-        return reward, damage, self.state[player]
+        return reward, damage, self.state[player_name]
 
     # def swap_defender(self, attacker, ryu_action, ken_action):
     #     defender = RYU if attacker == KEN else KEN
@@ -143,6 +143,7 @@ class Agent:
     def __init__(self, env, player_name):
         self.env = env
         self.state = self.env.state[player_name]
+        self.previous_state = self.state
         self.player_name = player_name
         self.health = 100
         self.qtable = {}
@@ -159,11 +160,13 @@ class Agent:
         self.score = 0
 
     def choose_action(self):
-        if random() < 0.01:
+        if random() < 0.2:
             return choice(ACTIONS)
         return arg_max(self.qtable[self.state])
 
     def do(self, learning_rate=0.7, discount_factor=0.3):
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
         action = self.choose_action()
         reward, damage, new_state = self.env.do(self.player_name, action)
         self.score += reward
@@ -172,6 +175,7 @@ class Agent:
         self.qtable[self.state][action] += learning_rate * (
                 reward + discount_factor * maxQ - self.qtable[self.state][action])
 
+        self.previous_state = self.state
         self.state = new_state
         return action, damage
 
@@ -187,6 +191,18 @@ class Agent:
     def get_hit(self, hit_damage):
         self.health -= hit_damage
 
+    def win(self, action):
+        self.score += REWARD_WIN
+        maxQ = max(self.qtable[self.state].values())
+        self.qtable[self.previous_state][action] += self.learning_rate * (
+                REWARD_WIN + self.discount_factor * maxQ - self.qtable[self.previous_state][action])
+
+    def lose(self, action):
+        self.score += REWARD_LOSE
+        maxQ = max(self.qtable[self.state].values())
+        self.qtable[self.previous_state][action] += self.learning_rate * (
+                REWARD_WIN + self.discount_factor * maxQ - self.qtable[self.previous_state][action])
+
 
 if __name__ == '__main__':
     street_fighter_env = Environment()
@@ -197,14 +213,7 @@ if __name__ == '__main__':
 
     iterations = 0
     wins = 0
-    while wins < 100:
-        if Ryu.is_dead() or Ken.is_dead():
-            street_fighter_env.reset()
-            ken_score.append(Ken.get_score())
-            ryu_score.append(Ryu.get_score())
-            Ryu.reset()
-            Ken.reset()
-            wins += 1
+    while wins < 2000:
 
         iterations += 1
         action_Ryu, damage = Ryu.do()
@@ -212,14 +221,26 @@ if __name__ == '__main__':
         action_Ken, damage = Ken.do()
         Ryu.get_hit(damage)
 
-        print(
-            f"Iteration {iterations} - Ryu: {action_Ryu} {street_fighter_env.state[RYU][1]}, Ken: {action_Ken} {street_fighter_env.state[KEN][1]}")
-        print(f"Ryu {street_fighter_env.get_player_positions()} Ken")
-        street_fighter_env.print_map()
-        print("Ryu Health:", Ryu.get_health())
-        print("Ken Health:", Ken.get_health())
-        print("Ryu Score:", Ryu.get_score())
-        print("Ken Score:", Ken.get_score())
+        # print(
+        #     f"Iteration {iterations} - Ryu: {action_Ryu} {street_fighter_env.state[RYU][1]}, Ken: {action_Ken} {street_fighter_env.state[KEN][1]}")
+        # print(f"Ryu {street_fighter_env.get_player_positions()} Ken")
+        # street_fighter_env.print_map()
+        # print("Ryu :", Ryu.get_health(), Ryu.get_score())
+        # print("Ken :", Ken.get_health(), Ken.get_score())
+
+        if Ryu.is_dead() or Ken.is_dead():
+            if Ryu.is_dead():
+                Ryu.lose(action_Ryu)
+                Ken.win(action_Ken)
+            else:
+                Ryu.win(action_Ryu)
+                Ken.lose(action_Ken)
+            street_fighter_env.reset()
+            ken_score.append(Ken.get_score())
+            ryu_score.append(Ryu.get_score())
+            Ryu.reset()
+            Ken.reset()
+            wins += 1
 
     plt.plot(ryu_score, label="Ryu")
     plt.plot(ken_score, label="Ken")
