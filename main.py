@@ -20,6 +20,7 @@ REWARD_WIN = 1000
 REWARD_LOSE = -1000
 REWARD_HIT = 50
 REWARD_GET_HIT = -50
+REWARD_MOVE = -1
 
 REWARD_COOLDOWN = -10
 REWARD_DODGE = 15
@@ -60,6 +61,7 @@ class Environment:
         damage = 0
         if action in MOVES:
             reward += self.update_player_position(player, action)
+            reward += REWARD_MOVE
 
         if action in ATTACKS:
             if self.is_within_range(player, action):
@@ -79,7 +81,7 @@ class Environment:
 
     def is_within_range(self, attacker, attack):
         defender = RYU if attacker == KEN else KEN
-        return (self.distance_between_players() == 1 and
+        return (DISTANCES[self.distance_between_players()] == 1 and
                 self.state[attacker][1] + self.positions[attacker]
                 == self.positions[defender])
 
@@ -141,14 +143,13 @@ class Agent:
         print(self.qtable)
 
     def choose_action(self):
-        return choice(ACTIONS)
-        # return arg_max(self.qtable[self.state])
+        # return choice(ACTIONS)
+        return arg_max(self.qtable[self.state])
 
-    def do(self, learning_rate=1, discount_factor=0.9):
+    def do(self, learning_rate=0.8, discount_factor=0.5):
         prev_state = self.state
         action = self.choose_action()
         reward, damage, state = self.env.do(self.player_name, action)
-        self.health += damage
         self.score += reward
         self.state = state
         self.qtable[prev_state][action] += learning_rate * (
@@ -178,12 +179,11 @@ if __name__ == '__main__':
         iterations += 1
         action_Ryu, damage = Ryu.do()
         Ken.get_hit(damage)
-        print("Damage Ryu", damage)
         action_Ken, damage = Ken.do()
         Ryu.get_hit(damage)
-        print("Damage Ken", damage)
 
-        print(f"Iteration {iterations} - Ryu: {action_Ryu} {street_fighter_env.state[RYU][1]}, Ken: {action_Ken} {street_fighter_env.state[KEN][1]}")
+        print(
+            f"Iteration {iterations} - Ryu: {action_Ryu} {street_fighter_env.state[RYU][1]}, Ken: {action_Ken} {street_fighter_env.state[KEN][1]}")
         print(f"Ryu {street_fighter_env.get_player_positions()} Ken")
         street_fighter_env.print_map()
         print("Ryu Health:", Ryu.get_health())
