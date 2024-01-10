@@ -4,37 +4,28 @@ RYU = "Ryu"
 KEN = "Ken"
 
 ORIENTATION_RIGHT, ORIENTATION_LEFT = -1, 1
+ORIENTATIONS = [ORIENTATION_RIGHT, ORIENTATION_LEFT]
 
-ACTION_LEFT, ACTION_RIGHT, ACTION_DODGE, ACTION_PUNCH, ACTION_KICK, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_LOW_PUNCH, ACTION_HIGH_PUNCH, ACTION_COOLDOWN = 'L', 'R', 'D', 'P', 'K', 'LK', 'HK', 'LP', 'HP', 'CD'
+ACTION_LEFT, ACTION_RIGHT, ACTION_PUNCH, ACTION_KICK, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_LOW_PUNCH, ACTION_HIGH_PUNCH = 'L', 'R', 'P', 'K', 'LK', 'HK', 'LP', 'HP'
 
-ACTIONS = [ACTION_LEFT, ACTION_RIGHT, ACTION_DODGE, ACTION_PUNCH, ACTION_KICK, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_LOW_PUNCH, ACTION_HIGH_PUNCH, ACTION_COOLDOWN]
+ACTIONS = [ACTION_LEFT, ACTION_RIGHT, ACTION_PUNCH, ACTION_KICK, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_LOW_PUNCH,
+           ACTION_HIGH_PUNCH]
 MOVES = {
     ACTION_LEFT: (-1, -1),
     ACTION_RIGHT: (1, 1),
 }
 ATTACKS = [ACTION_PUNCH, ACTION_KICK, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_LOW_PUNCH, ACTION_HIGH_PUNCH]
 
-REWARD_MOVE = -1
-REWARD_ATTACKS = {
-    ACTION_PUNCH: 10,
-    ACTION_LOW_PUNCH: 10,
-    ACTION_HIGH_PUNCH: 10,
-    ACTION_KICK: 20,
-    ACTION_LOW_KICK: 20,
-    ACTION_HIGH_KICK: 20,
-}
-REWARD_ATTACKS_MISS = {
-    ACTION_PUNCH: -10,
-    ACTION_LOW_PUNCH: -10,
-    ACTION_HIGH_PUNCH: -10,
-    ACTION_KICK: -20,
-    ACTION_LOW_KICK: -20,
-    ACTION_HIGH_KICK: -20,
-}
+REWARD_WIN = 1000
+REWARD_LOSE = -1000
+REWARD_HIT = 50
+REWARD_GET_HIT = -50
+
 REWARD_COOLDOWN = -10
 REWARD_DODGE = 15
 REWARD_DODGE_MISS = -15
 REWARD_WALL = -100
+# todo modifier les rewards
 
 NEAR, MID, FAR = 'N', 'M', 'F'
 DISTANCES = {
@@ -42,102 +33,92 @@ DISTANCES = {
     MID: 2,
     FAR: 3,
 }
-ATTACK_RANGES = {
-    ACTION_PUNCH: NEAR,
-    ACTION_LOW_PUNCH: NEAR,
-    ACTION_HIGH_PUNCH: NEAR,
-    ACTION_KICK: MID,
-    ACTION_LOW_KICK: MID,
-    ACTION_HIGH_KICK: MID,
-}
+
+STANDING, CROUCHING, JUMPING = 'S', 'C', 'J'
+STANCES = [STANDING, CROUCHING, JUMPING]
+
+
+def arg_max(table):
+    return max(table, key=table.get)
 
 
 class Environment:
     GRID_LIMIT = 5
 
-    def __init__(self):
-        self.players = {
-            RYU: {'position': -2, 'health': 100, 'score': 0, 'orientation': ORIENTATION_LEFT},
-            KEN: {'position': 2, 'health': 100, 'score': 0, 'orientation': ORIENTATION_RIGHT}
-            #TODO refactor orientation
+    def __init__(self, ken_start=2, ryu_start=-2):
+        self.positions = {
+            KEN: ken_start,
+            RYU: ryu_start,
         }
-        self.state = (self.players[RYU]['position'], self.players[KEN]['position'])
+        self.state = {
+            RYU: (self.distance_between_players(), ORIENTATION_RIGHT),  # self.distance_between_players()
+            KEN: (self.distance_between_players(), ORIENTATION_LEFT),
+        }
 
-    def do(self, ryu_action, ken_action):
-        if ryu_action in MOVES:
-            self.update_player_position(RYU, ryu_action)
+    def do(self, player, action):  # retourne tuple (reward, ∂HP, state)
+        reward = 0
+        damage = 0
+        if action in MOVES:
+            reward += self.update_player_position(player, action)
 
-        if ken_action in MOVES:
-            self.update_player_position(KEN, ken_action)
+        if action in ATTACKS:
+            if self.is_within_range(player, action):
+                reward += REWARD_HIT
+                damage = 10
+                # todo range/dodge/etc.
+            else:
+                reward -= REWARD_HIT
 
-        for attacker in self.players.keys():
-            defender, attacker_action, defender_action = self.swap_defender(attacker, ryu_action, ken_action)
+        return reward, damage, self.state[player]
 
-            if attacker_action in ATTACKS:
-                if self.is_within_range(attacker, attacker_action):
-                    if defender_action == ACTION_DODGE:
-                        self.players[attacker]['score'] += REWARD_ATTACKS_MISS[attacker_action]
-                    else:
-                        self.players[attacker]['score'] += REWARD_ATTACKS[attacker_action]
-                else:
-                    self.players[attacker]['score'] += REWARD_ATTACKS_MISS[attacker_action]
-            elif attacker_action == ACTION_DODGE:
-                if defender_action in ATTACKS and self.is_within_range(defender, defender_action):
-                    self.players[attacker]['score'] += REWARD_DODGE
-                else:
-                    self.players[attacker]['score'] += REWARD_DODGE_MISS
-
-            if defender_action in ATTACKS:
-                if self.is_within_range(defender, defender_action):
-                    if attacker_action != ACTION_DODGE:
-                        self.players[attacker]['health'] -= REWARD_ATTACKS[defender_action]
-                        if self.players[attacker]['health'] < 0:
-                            self.players[attacker]['health'] = 0
-
-    def swap_defender (self, attacker, ryu_action, ken_action):
-        defender = RYU if attacker == KEN else KEN
-        attacker_action = ryu_action if attacker == RYU else ken_action
-        defender_action = ryu_action if attacker == KEN else ken_action
-        return defender, attacker_action, defender_action
+    # def swap_defender(self, attacker, ryu_action, ken_action):
+    #     defender = RYU if attacker == KEN else KEN
+    #     attacker_action = ryu_action if attacker == RYU else ken_action
+    #     defender_action = ryu_action if attacker == KEN else ken_action
+    #     return defender, attacker_action, defender_action
 
     def is_within_range(self, attacker, attack):
         defender = RYU if attacker == KEN else KEN
-        attack_range = ATTACK_RANGES[attack]
         return (self.distance_between_players() == 1 and
-                DISTANCES[attack_range] * self.players[attacker]['orientation'] + self.players[attacker]['position']
-                == self.players[defender]['position'])
+                self.state[attacker][1] + self.positions[attacker]
+                == self.positions[defender])
+
+    @staticmethod
+    def map_distance_to_range(distance):
+        if distance == 1:
+            return NEAR
+        elif distance == 2:
+            return MID
+        else:
+            return FAR
 
     def distance_between_players(self):
-        return abs(self.players[RYU]['position'] - self.players[KEN]['position'])
+        return self.map_distance_to_range(abs(self.positions[RYU] - self.positions[KEN]))
 
-    def update_player_position(self, player, action):
-        new_position, self.players[player]['orientation'] = MOVES[action]
-        new_position += self.players[player]['position']
+    def update_player_position(self, player, action):  # retourne une reward
+        move, new_orientation = MOVES[action]
+        new_position = self.positions[player] + move
+        reward = 0
         if -self.GRID_LIMIT <= new_position <= self.GRID_LIMIT:
-            self.players[player]['position'] = new_position
-            self.players[player]['score'] += REWARD_MOVE
+            self.positions[player] = new_position
+            self.state[RYU] = (
+                self.distance_between_players(), new_orientation if player == RYU else self.state[RYU][1])
+            self.state[KEN] = (
+                self.distance_between_players(), new_orientation if player == KEN else self.state[KEN][1])
         else:
-            self.players[player]['score'] += REWARD_WALL
+            reward += REWARD_WALL
+        return reward
 
     def get_player_positions(self):
-        return self.players[RYU]['position'], self.players[KEN]['position']
-
-    def get_player_health(self, player_name):
-        return self.players[player_name]['health']
-
-    def get_player_score(self, player_name):
-        return self.players[player_name]['score']
-
-    def is_game_over(self):
-        return any(player['health'] <= 0 for player in self.players.values())
+        return self.positions[RYU], self.positions[KEN]
 
     def print_map(self):
-        for i in range(-self.GRID_LIMIT, self.GRID_LIMIT+1):
-            if self.players[RYU]['position'] == i and self.players[KEN]['position'] == i:
+        for i in range(-self.GRID_LIMIT, self.GRID_LIMIT + 1):
+            if self.positions[RYU] == i and self.positions[KEN] == i:
                 print('O', end='')
-            elif self.players[RYU]['position'] == i:
+            elif self.positions[RYU] == i:
                 print(RYU[0], end='')
-            elif self.players[KEN]['position'] == i:
+            elif self.positions[KEN] == i:
                 print(KEN[0], end='')
             else:
                 print('_', end='')
@@ -147,20 +128,44 @@ class Environment:
 class Agent:
     def __init__(self, env, player_name):
         self.env = env
+        self.state = self.env.state[player_name]
         self.player_name = player_name
         self.health = 100
         self.qtable = {}
-        # for state in env.map:
-        #     self.qtable[state] = {}
-        #     for action in ACTIONS:
-        #         self.qtable[state][action] = 0.0
+        self.score = 0
+        for distance in DISTANCES:
+            for orientation in ORIENTATIONS:
+                self.qtable[(distance, orientation)] = {}
+                for action in ACTIONS:
+                    self.qtable[(distance, orientation)][action] = 0.0
+        print(self.qtable)
 
     def choose_action(self):
         return choice(ACTIONS)
+        # return arg_max(self.qtable[self.state])
 
-    def do(self):
+    def do(self, learning_rate=1, discount_factor=0.9):
+        prev_state = self.state
         action = self.choose_action()
-        return action
+        reward, damage, state = self.env.do(self.player_name, action)
+        self.health += damage
+        self.score += reward
+        self.state = state
+        self.qtable[prev_state][action] += learning_rate * (
+                reward + discount_factor * max(self.qtable[self.state].values()) - self.qtable[prev_state][action])
+        return action, damage
+
+    def is_dead(self):
+        return self.health <= 0
+
+    def get_health(self):
+        return self.health
+
+    def get_score(self):
+        return self.score
+
+    def get_hit(self, hit_damage):
+        self.health -= hit_damage
 
 
 if __name__ == '__main__':
@@ -169,18 +174,21 @@ if __name__ == '__main__':
     Ken = Agent(street_fighter_env, KEN)
 
     iterations = 0
-    while not street_fighter_env.is_game_over():
+    while not Ryu.is_dead() and not Ken.is_dead():
         iterations += 1
-        action_Ryu = Ryu.do()
-        action_Ken = Ken.do()
-        street_fighter_env.do(action_Ryu, action_Ken)
+        action_Ryu, damage = Ryu.do()
+        Ken.get_hit(damage)
+        print("Damage Ryu", damage)
+        action_Ken, damage = Ken.do()
+        Ryu.get_hit(damage)
+        print("Damage Ken", damage)
 
-        print(f"Iteration {iterations} - Ryu: {action_Ryu}, Ken: {action_Ken}")
+        print(f"Iteration {iterations} - Ryu: {action_Ryu} {street_fighter_env.state[RYU][1]}, Ken: {action_Ken} {street_fighter_env.state[KEN][1]}")
         print(f"Ryu {street_fighter_env.get_player_positions()} Ken")
         street_fighter_env.print_map()
-        print("Ryu Health:", street_fighter_env.get_player_health(RYU))
-        print("Ken Health:", street_fighter_env.get_player_health(KEN))
-        print("Ryu Score:", street_fighter_env.get_player_score(RYU))
-        print("Ken Score:", street_fighter_env.get_player_score(KEN))
+        print("Ryu Health:", Ryu.get_health())
+        print("Ken Health:", Ken.get_health())
+        print("Ryu Score:", Ryu.get_score())
+        print("Ken Score:", Ken.get_score())
 
     print("Game Over!")
