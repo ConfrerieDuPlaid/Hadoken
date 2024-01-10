@@ -1,4 +1,6 @@
-from random import choice
+from random import random, choice
+
+from matplotlib import pyplot as plt
 
 RYU = "Ryu"
 KEN = "Ken"
@@ -18,9 +20,9 @@ ATTACKS = [ACTION_PUNCH, ACTION_KICK, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_
 
 REWARD_WIN = 1000
 REWARD_LOSE = -1000
-REWARD_HIT = 50
-REWARD_GET_HIT = -50
-REWARD_MOVE = -1
+REWARD_HIT = 10
+REWARD_GET_HIT = -40
+REWARD_MOVE = -5
 
 REWARD_COOLDOWN = -10
 REWARD_DODGE = 15
@@ -50,6 +52,16 @@ class Environment:
         self.positions = {
             KEN: ken_start,
             RYU: ryu_start,
+        }
+        self.state = {
+            RYU: (self.distance_between_players(), ORIENTATION_RIGHT),  # self.distance_between_players()
+            KEN: (self.distance_between_players(), ORIENTATION_LEFT),
+        }
+
+    def reset(self):
+        self.positions = {
+            KEN: 2,
+            RYU: -2,
         }
         self.state = {
             RYU: (self.distance_between_players(), ORIENTATION_RIGHT),  # self.distance_between_players()
@@ -140,20 +152,27 @@ class Agent:
                 self.qtable[(distance, orientation)] = {}
                 for action in ACTIONS:
                     self.qtable[(distance, orientation)][action] = 0.0
-        print(self.qtable)
+
+    def reset(self):
+        self.state = self.env.state[self.player_name]
+        self.health = 100
+        self.score = 0
 
     def choose_action(self):
-        # return choice(ACTIONS)
+        if random() < 0.01:
+            return choice(ACTIONS)
         return arg_max(self.qtable[self.state])
 
-    def do(self, learning_rate=0.8, discount_factor=0.5):
-        prev_state = self.state
+    def do(self, learning_rate=0.7, discount_factor=0.3):
         action = self.choose_action()
-        reward, damage, state = self.env.do(self.player_name, action)
+        reward, damage, new_state = self.env.do(self.player_name, action)
         self.score += reward
-        self.state = state
-        self.qtable[prev_state][action] += learning_rate * (
-                reward + discount_factor * max(self.qtable[self.state].values()) - self.qtable[prev_state][action])
+
+        maxQ = max(self.qtable[new_state].values())
+        self.qtable[self.state][action] += learning_rate * (
+                reward + discount_factor * maxQ - self.qtable[self.state][action])
+
+        self.state = new_state
         return action, damage
 
     def is_dead(self):
@@ -173,9 +192,20 @@ if __name__ == '__main__':
     street_fighter_env = Environment()
     Ryu = Agent(street_fighter_env, RYU)
     Ken = Agent(street_fighter_env, KEN)
+    ryu_score = []
+    ken_score = []
 
     iterations = 0
-    while not Ryu.is_dead() and not Ken.is_dead():
+    wins = 0
+    while wins < 100:
+        if Ryu.is_dead() or Ken.is_dead():
+            street_fighter_env.reset()
+            ken_score.append(Ken.get_score())
+            ryu_score.append(Ryu.get_score())
+            Ryu.reset()
+            Ken.reset()
+            wins += 1
+
         iterations += 1
         action_Ryu, damage = Ryu.do()
         Ken.get_hit(damage)
@@ -191,4 +221,9 @@ if __name__ == '__main__':
         print("Ryu Score:", Ryu.get_score())
         print("Ken Score:", Ken.get_score())
 
-    print("Game Over!")
+    plt.plot(ryu_score, label="Ryu")
+    plt.plot(ken_score, label="Ken")
+    plt.legend()
+    plt.show()
+
+
