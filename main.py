@@ -18,7 +18,7 @@ MOVES = {
 }
 ATTACKS = [ACTION_PUNCH, ACTION_KICK, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_LOW_PUNCH, ACTION_HIGH_PUNCH]
 
-REWARD_WIN = 2000
+REWARD_WIN = 1000
 REWARD_LOSE = -2000
 REWARD_HIT = 10
 REWARD_GET_HIT = -40
@@ -28,7 +28,6 @@ REWARD_COOLDOWN = -10
 REWARD_DODGE = 15
 REWARD_DODGE_MISS = -15
 REWARD_WALL = -100
-# todo modifier les rewards
 
 NEAR, MID, FAR = 'N', 'M', 'F'
 DISTANCES = {
@@ -142,7 +141,7 @@ class Environment:
 class Agent:
     def __init__(self, env, player_name):
         self.env = env
-        self.state = self.env.state[player_name]
+        self.state = self.env.radars[player_name]
         self.previous_state = self.state
         self.player_name = player_name
         self.health = 100
@@ -155,7 +154,7 @@ class Agent:
                     self.qtable[(distance, orientation)][action] = 0.0
 
     def reset(self):
-        self.state = self.env.state[self.player_name]
+        self.state = self.env.radars[self.player_name]
         self.health = 100
         self.score = 0
 
@@ -213,7 +212,7 @@ if __name__ == '__main__':
 
     iterations = 0
     wins = 0
-    while wins < 2000:
+    while wins < 50:
 
         iterations += 1
         action_Ryu, damage = Ryu.do()
