@@ -86,22 +86,19 @@ class Environment:
             RYU: {},
             KEN: {},
         }
-        self.last_actions = { #todo think about it
-            RYU: ACTION_NONE,
-            KEN: ACTION_NONE,
-        }
-
-    def player_state(self, player): #todo wtf
-        return self.radars[player], self.orientations[player], self.last_actions[player]
 
     def reset(self):
         self.positions = {
             KEN: KEN_START,
             RYU: RYU_START,
         }
+        self.orientations = {
+            RYU: ORIENTATION_RIGHT,
+            KEN: ORIENTATION_LEFT,
+        }
         self.radars = {
-            RYU: (self.distance_between_players(), STANCE_STANDING, ORIENTATION_RIGHT),
-            KEN: (self.distance_between_players(), STANCE_STANDING, ORIENTATION_LEFT),
+            RYU: self.get_radar(RYU),
+            KEN: self.get_radar(KEN),
         }
 
     def set_agents(self, ryu, ken):
@@ -139,11 +136,11 @@ class Environment:
     def is_within_range(self, attacker, attack):
         radar = self.get_radar(attacker)
         target = radar[3 + self.orientations[attacker]]
-        return target != WALL and target != '_' #todo not = self
+        return target != WALL and target != '_'  # todo not = self
 
     def do(self, player):
         reward = 0
-        last_opponent_action = self.last_actions[self.opponent(player)]
+        last_opponent_action = self.agents[self.opponent(player)].current_action
         damage_inflicted = False
         action = self.agents[player].current_action
         if action in MOVES:
@@ -170,8 +167,6 @@ class Environment:
         if action == ACTION_NONE:
             reward -= REWARD_NONE
 
-        self.last_actions[player] = action
-
         return reward, damage_inflicted, (self.get_radar(player), self.orientations[player])
 
     def inflict_damage(self, player):
@@ -194,11 +189,11 @@ class Environment:
 
 
 class Agent:
-    def __init__(self, env, player_name, learning_rate=0.45, discount_factor=0.55):
+    def __init__(self, environment, player_name, learning_rate=0.45, discount_factor=0.55):
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
-        self.env = env
-        self.state = env.player_state(player_name)
+        self.env = environment
+        self.state = environment.player_state(player_name)
         self.previous_state = self.state
         self.previous_action = ACTION_NONE
         self.current_action = ACTION_NONE
