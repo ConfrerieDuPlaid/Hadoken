@@ -282,12 +282,35 @@ class Graphic(arcade.Window):
 
     def __init__(self):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+        self.ryu_wins = None
+        self.max_wins = None
+        self.ken_wins = None
+        self.wins = None
+        self.iterations = None
+        self.ken_score = None
+        self.ryu_score = None
+        self.Ryu = None
+        self.Ken = None
+        self.env = None
         self.gui_camera = None
         self.camera = None
         self.scene = None
         self.wall_list = None
 
+
     def setup(self):
+        self.env = Environment()
+        self.Ryu = Agent(self.env, RYU)
+        self.Ken = Agent(self.env, KEN)
+        self.env.set_agents(self.Ryu, self.Ken)
+        self.ryu_score = []
+        self.ken_score = []
+
+        self.iterations = 0
+        self.wins = 0
+        self.max_wins = 100
+        self.ken_wins, self.ryu_wins = 0, 0
+
         self.scene = arcade.Scene()
         self.background_color = arcade.csscolor.CORNFLOWER_BLUE
         self.wall_list = arcade.SpriteList(use_spatial_hash=True)
@@ -303,6 +326,49 @@ class Graphic(arcade.Window):
         self.wall_list.draw()
 
     def on_update(self, delta_time: float):
+        player_start = choice(PLAYERS)
+        if player_start == RYU:
+            self.Ryu.do()
+            self.Ken.do()
+        else:
+            self.Ken.do()
+            self.Ryu.do()
+        self.iterations += 1
+
+        print(
+            f"N°{self.iterations} - "
+            f"Ryu: {{{self.Ryu.current_action} {self.env.orientations[RYU]}/{self.Ryu.get_health()} {self.Ryu.get_score()}}} "
+            f"Ken: {{{self.Ken.current_action} {self.env.orientations[KEN]}/{self.Ken.get_health()} {self.Ken.get_score()}}} ",
+            end="")
+        self.env.print_map()
+
+        if self.Ryu.is_dead() or self.Ken.is_dead():
+            if self.Ryu.is_dead():
+                self.Ryu.lose()
+                self.Ken.win()
+                self.ken_wins += 1
+                print("KEN WINS!")
+            else:
+                self.Ryu.win()
+                self.Ken.lose()
+                self.ryu_wins += 1
+                print("RYU WINS!")
+            self.env.reset()
+            self.ken_score.append(self.Ken.get_score())
+            self.ryu_score.append(self.Ryu.get_score())
+            self.Ryu.reset()
+            self.Ken.reset()
+            self.wins += 1
+
+        if self.wins == self.max_wins:
+            plt.plot(self.ryu_score, label="Ryu")
+            plt.plot(self.ken_score, label="Ken")
+            self.Ryu.save("RyuQtable.qtable")
+            self.Ken.save("KenQtable.qtable")
+            print(f"Ryu wins: {self.ryu_wins}, Ken wins: {self.ken_wins}")
+            plt.legend()
+            plt.show()
+            exit(0)
 
 
 if __name__ == '__main__':
