@@ -2,6 +2,7 @@ import pickle
 
 from matplotlib import pyplot as plt
 from random import random, choice
+import arcade
 
 RYU = "Ryu"
 KEN = "Ken"
@@ -44,6 +45,11 @@ WALL = '#'
 KEN_START = 2
 RYU_START = 6
 
+SCREEN_WIDTH = 1000
+SCREEN_HEIGHT = 650
+SCREEN_TITLE = "Platformer"
+
+SPRITE_SCALE = 0.5
 
 def distance_to_range(distance):
     if distance == 0:
@@ -272,63 +278,34 @@ class Agent:
             pickle.dump(self.qtable, file)
 
 
+class Graphic(arcade.Window):
+
+    def __init__(self):
+        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+        self.gui_camera = None
+        self.camera = None
+        self.scene = None
+        self.wall_list = None
+
+    def setup(self):
+        self.scene = arcade.Scene()
+        self.background_color = arcade.csscolor.CORNFLOWER_BLUE
+        self.wall_list = arcade.SpriteList(use_spatial_hash=True)
+
+        for x in range(0, 1250, 64):
+            wall = arcade.Sprite("./tiles/grassMid.png", SPRITE_SCALE)
+            wall.center_x = x
+            wall.center_y = 32
+            self.wall_list.append(wall)
+
+    def on_draw(self):
+        self.clear()
+        self.wall_list.draw()
+
+    def on_update(self, delta_time: float):
+
+
 if __name__ == '__main__':
-    env = Environment()
-    Ryu = Agent(env, RYU)
-    Ken = Agent(env, KEN)
-    env.set_agents(Ryu, Ken)
-    ryu_score = []
-    ken_score = []
-
-    iterations = 0
-    wins = 0
-    max_wins = 100
-    ken_wins, ryu_wins = 0, 0
-    while wins < max_wins:
-        player_start = choice(PLAYERS)
-        if player_start == RYU:
-            Ryu.do()
-            Ken.do()
-        else:
-            Ken.do()
-            Ryu.do()
-        iterations += 1
-
-        print(
-            f"N°{iterations} - "
-            f"Ryu: {{{Ryu.current_action} {env.orientations[RYU]}/{Ryu.get_health()} {Ryu.get_score()}}} "
-            f"Ken: {{{Ken.current_action} {env.orientations[KEN]}/{Ken.get_health()} {Ken.get_score()}}} ",
-            end="")
-        env.print_map()
-
-        if Ryu.is_dead() or Ken.is_dead():
-            if Ryu.is_dead():
-                Ryu.lose()
-                Ken.win()
-                ken_wins += 1
-                print("KEN WINS!")
-            else:
-                Ryu.win()
-                Ken.lose()
-                ryu_wins += 1
-                print("RYU WINS!")
-            env.reset()
-            ken_score.append(Ken.get_score())
-            ryu_score.append(Ryu.get_score())
-            Ryu.reset()
-            Ken.reset()
-            wins += 1
-
-        if wins == max_wins:
-            print("Replay?")
-            readline = input()
-            if readline == "y":
-                wins = 0
-
-    plt.plot(ryu_score, label="Ryu")
-    plt.plot(ken_score, label="Ken")
-    Ryu.save("RyuQtable.qtable")
-    Ken.save("KenQtable.qtable")
-    print(f"Ryu wins: {ryu_wins}, Ken wins: {ken_wins}")
-    plt.legend()
-    plt.show()
+    window = Graphic()
+    window.setup()
+    window.run()
