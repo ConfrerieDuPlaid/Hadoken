@@ -338,6 +338,7 @@ class Graphic(arcade.Window):
         self.player_list.draw()
 
     def on_update(self, delta_time: float):
+        self.Ken.player_sprite.center_x = self.env.positions[KEN] * 64
         player_start = choice(PLAYERS)
         if player_start == RYU:
             self.Ryu.do()
