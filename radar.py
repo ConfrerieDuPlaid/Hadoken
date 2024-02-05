@@ -50,7 +50,7 @@ SCREEN_HEIGHT = 650
 SCREEN_TITLE = "Platformer"
 
 SPRITE_SCALE = 0.5
-
+CHARACTER_SCALING = 0.7
 def distance_to_range(distance):
     if distance == 0:
         return DISTANCE_NONE
@@ -194,8 +194,14 @@ class Environment:
         print()
 
 
-class Agent:
+class Agent(arcade.Sprite):
     def __init__(self, environment, player_name, learning_rate=0.45, discount_factor=0.55):
+        super().__init__()
+        image_source = "./tiles/femaleAdventurer.png"
+        self.player_sprite = arcade.Sprite(image_source, CHARACTER_SCALING)
+        self.player_sprite.center_x = 64
+        self.player_sprite.center_y = 128
+
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.env = environment
@@ -282,6 +288,7 @@ class Graphic(arcade.Window):
 
     def __init__(self):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+        self.player_list = None
         self.ryu_wins = None
         self.max_wins = None
         self.ken_wins = None
@@ -305,6 +312,10 @@ class Graphic(arcade.Window):
         self.env.set_agents(self.Ryu, self.Ken)
         self.ryu_score = []
         self.ken_score = []
+        self.player_list = arcade.SpriteList()
+
+        self.player_list.append(self.Ryu.player_sprite)
+        self.player_list.append(self.Ken.player_sprite)
 
         self.iterations = 0
         self.wins = 0
@@ -324,6 +335,7 @@ class Graphic(arcade.Window):
     def on_draw(self):
         self.clear()
         self.wall_list.draw()
+        self.player_list.draw()
 
     def on_update(self, delta_time: float):
         player_start = choice(PLAYERS)
