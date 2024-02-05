@@ -193,7 +193,7 @@ class Agent:
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.env = environment
-        self.state = environment.player_state(player_name)
+        self.state = environment.radars[player_name]
         self.previous_state = self.state
         self.previous_action = ACTION_NONE
         self.current_action = ACTION_NONE
