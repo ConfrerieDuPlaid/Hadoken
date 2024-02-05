@@ -44,6 +44,7 @@ WALL = '#'
 KEN_START = 2
 RYU_START = 6
 
+
 def distance_to_range(distance):
     if distance == 0:
         return DISTANCE_NONE
@@ -71,7 +72,7 @@ class Environment:
     def __init__(self):
         self.positions = {
             RYU: RYU_START,
-            KEN: RYU_START,
+            KEN: KEN_START,
         }
         self.orientations = {
             RYU: ORIENTATION_RIGHT,
@@ -85,12 +86,12 @@ class Environment:
             RYU: {},
             KEN: {},
         }
-        self.last_actions = {
+        self.last_actions = { #todo think about it
             RYU: ACTION_NONE,
             KEN: ACTION_NONE,
         }
 
-    def player_state(self, player):
+    def player_state(self, player): #todo wtf
         return self.radars[player], self.orientations[player], self.last_actions[player]
 
     def reset(self):
@@ -138,7 +139,7 @@ class Environment:
     def is_within_range(self, attacker, attack):
         radar = self.get_radar(attacker)
         target = radar[3 + self.orientations[attacker]]
-        return target != WALL and target != '_'
+        return target != WALL and target != '_' #todo not = self
 
     def do(self, player):
         reward = 0
@@ -286,7 +287,7 @@ if __name__ == '__main__':
 
     iterations = 0
     wins = 0
-    max_wins = 10000
+    max_wins = 100
     ken_wins, ryu_wins = 0, 0
     while wins < max_wins:
         player_start = choice(PLAYERS)
