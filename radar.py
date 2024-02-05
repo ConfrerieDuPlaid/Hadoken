@@ -193,7 +193,7 @@ class Environment:
 
 
 class Agent:
-    def __init__(self, env, player_name, learning_rate=0.7, discount_factor=0.3):
+    def __init__(self, env, player_name, learning_rate=0.45, discount_factor=0.55):
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.env = env
