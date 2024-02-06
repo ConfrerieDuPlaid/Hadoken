@@ -26,6 +26,7 @@ REWARD_LOSE = -2048
 REWARD_WALL = -128
 REWARD_HIT = 16
 REWARD_GET_HIT = -32
+REWARD_DODGE = 16
 REWARD_MOVE = -1
 REWARD_NONE = -16
 HIT_DAMAGE = 10
@@ -153,8 +154,11 @@ class Environment:
         damage_inflicted = False
         action = self.agents[player].current_action
         if action in MOVES:
+            was_within_range = self.is_within_range(player, action)
             reward += self.player_move(player, action)
             reward += REWARD_MOVE
+            if was_within_range and last_opponent_action in ATTACKS:
+                reward += REWARD_DODGE
 
         if action in ATTACKS:
             if self.is_within_range(player, action):
@@ -165,21 +169,22 @@ class Environment:
                     damage_inflicted = True
             else:
                 reward -= REWARD_HIT
-                damage_inflicted = True
 
         if action == ACTION_DODGE:
-            if last_opponent_action in ATTACKS:
-                reward += REWARD_HIT
+            if last_opponent_action in ATTACKS and self.is_within_range(player, last_opponent_action):
+                reward += REWARD_DODGE
             else:
-                reward -= REWARD_HIT
+                reward -= REWARD_DODGE
 
         if action == ACTION_NONE:
             reward -= REWARD_NONE
 
-        return reward, damage_inflicted, (self.get_radar(player), self.orientations[player])
+        if damage_inflicted:
+            self.inflict_damage_to(self.opponent(player))
 
-    def inflict_damage(self, player):
-        opponent = self.opponent(player)
+        return reward, (self.get_radar(player), self.orientations[player])
+
+    def inflict_damage_to(self, opponent):
         self.agents[opponent].get_hit()
 
     def print_map(self):
@@ -244,19 +249,16 @@ class Agent(arcade.Sprite):
         max_q = max(self.qtable[new_state].values())
         self.qtable[prev_state][self.previous_action] += self.learning_rate * (
                 reward + self.discount_factor * max_q - self.qtable[prev_state][self.current_action])
-        # print(f"{self.player_name}: {self.current_action} {self.get_state()}")
 
     def do(self):
         self.choose_action()
-        reward, damage_inflicted, new_state = self.env.do(self.player_name)
+        reward, new_state = self.env.do(self.player_name)
         self.score += reward
 
         self.update_qtable(reward, self.state, new_state)
         self.previous_state = self.state
         self.previous_action = self.current_action
         self.state = new_state
-        if damage_inflicted:
-            self.env.inflict_damage(self.player_name)
         return self.current_action
 
     def get_state(self):
@@ -264,7 +266,6 @@ class Agent(arcade.Sprite):
 
     def get_hit(self):
         self.health -= HIT_DAMAGE
-        # self.update_qtable(REWARD_GET_HIT, self.previous_state, self.state, self.previous_action)
 
     def is_dead(self):
         return self.health <= 0
@@ -298,8 +299,8 @@ class Graphic(arcade.Window):
         self.ken_wins = 0
         self.wins = 0
         self.iterations = 0
-        self.ken_score = None
-        self.ryu_score = None
+        self.ken_score = []
+        self.ryu_score = []
         self.Ryu = None
         self.Ken = None
         self.env = None
@@ -326,8 +327,6 @@ class Graphic(arcade.Window):
         self.Ken = Agent(self.env, KEN)
         self.Ken.set_position()
         self.env.set_agents(self.Ryu, self.Ken)
-        self.ryu_score = []
-        self.ken_score = []
 
         self.player_list = arcade.SpriteList()
         self.player_list.append(self.Ryu.player_sprite)
@@ -348,10 +347,8 @@ class Graphic(arcade.Window):
         player_start = choice(PLAYERS)
         if player_start == RYU:
             self.Ryu.do()
-            self.Ken.do()
         else:
             self.Ken.do()
-            self.Ryu.do()
         self.iterations += 1
 
         print(
@@ -379,16 +376,25 @@ class Graphic(arcade.Window):
             self.Ken.reset()
             self.wins += 1
 
-        if self.wins == self.max_wins:
-            self.env.reset()
-            plt.plot(self.ryu_score, label="Ryu")
-            plt.plot(self.ken_score, label="Ken")
-            self.Ryu.save("RyuQtable.qtable")
-            self.Ken.save("KenQtable.qtable")
-            print(f"Ryu wins: {self.ryu_wins}, Ken wins: {self.ken_wins}")
-            plt.legend()
-            plt.show()
+        if self.wins >= self.max_wins:
+            self.end_game()
             exit(0)
+
+    def end_game(self):
+        self.wins = self.max_wins
+        self.env.reset()
+        plt.plot(self.ryu_score, label="Ryu")
+        plt.plot(self.ken_score, label="Ken")
+        self.Ryu.save("RyuQtable.qtable")
+        self.Ken.save("KenQtable.qtable")
+        print(f"Ryu wins: {self.ryu_wins}, Ken wins: {self.ken_wins}")
+        plt.legend()
+        plt.show()
+
+    def on_key_press(self, key, modifiers):
+        if key == arcade.key.Q:
+            self.end_game()
+        self.update_player()
 
 
 if __name__ == '__main__':
