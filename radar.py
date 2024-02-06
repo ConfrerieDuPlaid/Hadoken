@@ -42,15 +42,19 @@ STANCE_STANDING, STANCE_CROUCHING, STANCE_JUMPING = 'S', 'C', 'J'
 STANCES = [STANCE_STANDING, STANCE_CROUCHING, STANCE_JUMPING]
 
 WALL = '#'
+GRID_LIMIT = 10
 KEN_START = 2
 RYU_START = 6
 
-SCREEN_WIDTH = 1000
-SCREEN_HEIGHT = 650
-SCREEN_TITLE = "Platformer"
+SPRITE_SIZE = 128
+SPRITE_SCALE = 1
+CHARACTER_SCALING = 2
 
-SPRITE_SCALE = 0.5
-CHARACTER_SCALING = 0.7
+SCREEN_WIDTH = SPRITE_SIZE * GRID_LIMIT
+SCREEN_HEIGHT = 650
+SCREEN_TITLE = "Hadoken - Street Fighter!"
+
+
 def distance_to_range(distance):
     if distance == 0:
         return DISTANCE_NONE
@@ -71,7 +75,6 @@ def sign(x):
 
 
 class Environment:
-    GRID_LIMIT = 10
     LEFT_WALL = 0
     RIGHT_WALL = GRID_LIMIT - 1
 
@@ -180,7 +183,7 @@ class Environment:
         self.agents[opponent].get_hit()
 
     def print_map(self):
-        for i in range(self.GRID_LIMIT):
+        for i in range(GRID_LIMIT):
             if i == self.LEFT_WALL or i == self.RIGHT_WALL:
                 print('|', end='')
             elif self.positions[RYU] == i and self.positions[KEN] == i:
@@ -197,11 +200,8 @@ class Environment:
 class Agent(arcade.Sprite):
     def __init__(self, environment, player_name, learning_rate=0.45, discount_factor=0.55):
         super().__init__()
-        image_source = "./tiles/femaleAdventurer.png"
+        image_source = f"./tiles/{player_name}.png"
         self.player_sprite = arcade.Sprite(image_source, CHARACTER_SCALING)
-        self.player_sprite.center_x = 64
-        self.player_sprite.center_y = 128
-
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.env = environment
@@ -213,6 +213,10 @@ class Agent(arcade.Sprite):
         self.health = 100
         self.qtable = {}
         self.score = 0
+
+    def set_position(self, center_x: float = 64, center_y: float = 192):
+        self.player_sprite.center_x = self.env.positions[self.player_name] * SPRITE_SIZE + SPRITE_SIZE / 2
+        self.player_sprite.center_y = SPRITE_SIZE + SPRITE_SIZE
 
     def reset(self):
         self.state = self.env.radars[self.player_name]
@@ -289,11 +293,11 @@ class Graphic(arcade.Window):
     def __init__(self):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         self.player_list = None
-        self.ryu_wins = None
-        self.max_wins = None
-        self.ken_wins = None
-        self.wins = None
-        self.iterations = None
+        self.max_wins = 100
+        self.ryu_wins = 0
+        self.ken_wins = 0
+        self.wins = 0
+        self.iterations = 0
         self.ken_score = None
         self.ryu_score = None
         self.Ryu = None
@@ -304,33 +308,34 @@ class Graphic(arcade.Window):
         self.scene = None
         self.wall_list = None
 
-
-    def setup(self):
-        self.env = Environment()
-        self.Ryu = Agent(self.env, RYU)
-        self.Ken = Agent(self.env, KEN)
-        self.env.set_agents(self.Ryu, self.Ken)
-        self.ryu_score = []
-        self.ken_score = []
-        self.player_list = arcade.SpriteList()
-
-        self.player_list.append(self.Ryu.player_sprite)
-        self.player_list.append(self.Ken.player_sprite)
-
-        self.iterations = 0
-        self.wins = 0
-        self.max_wins = 100
-        self.ken_wins, self.ryu_wins = 0, 0
-
+    def create_scene(self):
         self.scene = arcade.Scene()
         self.background_color = arcade.csscolor.CORNFLOWER_BLUE
         self.wall_list = arcade.SpriteList(use_spatial_hash=True)
 
-        for x in range(0, 1250, 64):
+        for x in range(0, SPRITE_SIZE * GRID_LIMIT, SPRITE_SIZE):
             wall = arcade.Sprite("./tiles/grassMid.png", SPRITE_SCALE)
-            wall.center_x = x
-            wall.center_y = 32
+            wall.center_x = x + SPRITE_SIZE / 2
+            wall.center_y = SPRITE_SIZE / 2
             self.wall_list.append(wall)
+
+    def setup(self):
+        self.env = Environment()
+        self.Ryu = Agent(self.env, RYU)
+        self.Ryu.set_position()
+        self.Ken = Agent(self.env, KEN)
+        self.Ken.set_position()
+        self.env.set_agents(self.Ryu, self.Ken)
+        self.ryu_score = []
+        self.ken_score = []
+
+        self.player_list = arcade.SpriteList()
+        self.player_list.append(self.Ryu.player_sprite)
+        self.player_list.append(self.Ken.player_sprite)
+
+        self.create_scene()
+
+        arcade.schedule(self.on_update, 1 / 30)
 
     def on_draw(self):
         self.clear()
@@ -338,7 +343,8 @@ class Graphic(arcade.Window):
         self.player_list.draw()
 
     def on_update(self, delta_time: float):
-        self.Ken.player_sprite.center_x = self.env.positions[KEN] * 64
+        self.Ken.set_position()
+        self.Ryu.set_position()
         player_start = choice(PLAYERS)
         if player_start == RYU:
             self.Ryu.do()
@@ -374,6 +380,7 @@ class Graphic(arcade.Window):
             self.wins += 1
 
         if self.wins == self.max_wins:
+            self.env.reset()
             plt.plot(self.ryu_score, label="Ryu")
             plt.plot(self.ken_score, label="Ken")
             self.Ryu.save("RyuQtable.qtable")
