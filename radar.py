@@ -17,8 +17,8 @@ ATTACKS = [ACTION_PUNCH, ACTION_KICK, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_
 ORIENTATION_LEFT, ORIENTATION_RIGHT = -1, 1
 ORIENTATIONS = [ORIENTATION_RIGHT, ORIENTATION_LEFT]
 MOVES = {
-    ACTION_LEFT: (-1, -1),
-    ACTION_RIGHT: (1, 1),
+    ACTION_LEFT: (-1, ORIENTATION_LEFT),
+    ACTION_RIGHT: (1, ORIENTATION_RIGHT),
 }
 
 REWARD_WIN = 1024
@@ -138,6 +138,7 @@ class Environment:
     def player_move(self, player, move):
         radar = self.get_radar(player)
         move_delta, self.orientations[player] = MOVES[move]
+        self.agents[player].orientation = self.orientations[player]
         if radar[3 + move_delta] == WALL:
             return REWARD_WALL
         self.positions[player] += move_delta
@@ -203,10 +204,14 @@ class Environment:
 
 
 class Agent(arcade.Sprite):
-    def __init__(self, environment, player_name, learning_rate=0.45, discount_factor=0.55):
+    def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.45, discount_factor=0.55):
         super().__init__()
-        image_source = f"./tiles/{player_name}.png"
-        self.player_sprite = arcade.Sprite(image_source, CHARACTER_SCALING)
+        self.sprite_lists = {
+            1: arcade.Sprite(f"./tiles/{player_name}1.png", CHARACTER_SCALING),
+            -1: arcade.Sprite(f"./tiles/{player_name}-1.png", CHARACTER_SCALING)
+        }
+        self.orientation = environment.orientations[player_name]
+        self.player_sprite = arcade.Sprite(f"./tiles/{player_name}{default_orientation}.png", CHARACTER_SCALING)
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.env = environment
@@ -220,10 +225,15 @@ class Agent(arcade.Sprite):
         self.score = 0
 
     def set_position(self, center_x: float = 64, center_y: float = 192):
+        print(self.env.orientations[self.player_name], self.orientation)
+        if self.env.orientations[self.player_name] != self.orientation:
+            print("Turning")
+            self.player_sprite = self.sprite_lists[self.orientation]
         self.player_sprite.center_x = self.env.positions[self.player_name] * SPRITE_SIZE + SPRITE_SIZE / 2
         self.player_sprite.center_y = SPRITE_SIZE + SPRITE_SIZE
 
     def reset(self):
+        self.orientation = self.env.orientations[self.player_name]
         self.state = self.env.radars[self.player_name]
         self.health = 100
         self.score = 0
@@ -242,8 +252,8 @@ class Agent(arcade.Sprite):
                 self.qtable[state][a] = 0.0
 
     def update_qtable(self, reward, prev_state, new_state, action_taken=""):
-        if action_taken == "":
-            action_taken = self.current_action
+        # if action_taken == "":
+        #     action_taken = self.current_action
         self.add_qtable_state(prev_state)
         self.add_qtable_state(new_state)
         max_q = max(self.qtable[new_state].values())
@@ -294,7 +304,7 @@ class Graphic(arcade.Window):
     def __init__(self):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         self.player_list = None
-        self.max_wins = 100
+        self.max_wins = 1
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
@@ -342,20 +352,23 @@ class Graphic(arcade.Window):
         self.player_list.draw()
 
     def on_update(self, delta_time: float):
-        self.Ken.set_position()
-        self.Ryu.set_position()
         player_start = choice(PLAYERS)
         if player_start == RYU:
             self.Ryu.do()
+            self.Ryu.set_position()
+            self.player_list[0] = self.Ryu.player_sprite
+            # self.player_list.append(self.Ryu.player_sprite)
         else:
             self.Ken.do()
+            self.Ken.set_position()
+            self.player_list[1] = self.Ken.player_sprite
         self.iterations += 1
 
-        print(
-            f"N°{self.iterations} - "
-            f"Ryu: {{{self.Ryu.current_action} {self.env.orientations[RYU]}/{self.Ryu.get_health()} {self.Ryu.get_score()}}} "
-            f"Ken: {{{self.Ken.current_action} {self.env.orientations[KEN]}/{self.Ken.get_health()} {self.Ken.get_score()}}} ",
-            end="")
+        # print(
+        #     f"N°{self.iterations} - "
+        #     f"Ryu: {{{self.Ryu.current_action} {self.env.orientations[RYU]}/{self.Ryu.get_health()} {self.Ryu.get_score()}}} "
+        #     f"Ken: {{{self.Ken.current_action} {self.env.orientations[KEN]}/{self.Ken.get_health()} {self.Ken.get_score()}}} ",
+        #     end="")
         self.env.print_map()
 
         if self.Ryu.is_dead() or self.Ken.is_dead():
@@ -363,11 +376,13 @@ class Graphic(arcade.Window):
                 self.Ryu.lose()
                 self.Ken.win()
                 self.ken_wins += 1
-                print("KEN WINS!")
+                print("RYU WINS!")
+                # self.display_victory(KEN)
             else:
                 self.Ryu.win()
                 self.Ken.lose()
                 self.ryu_wins += 1
+                # self.display_victory(RYU)
                 print("RYU WINS!")
             self.env.reset()
             self.ken_score.append(self.Ken.get_score())
@@ -379,6 +394,9 @@ class Graphic(arcade.Window):
         if self.wins >= self.max_wins:
             self.end_game()
             exit(0)
+
+    def display_victory(self, winner):
+        arcade.draw_text(f"{winner} wins!", 100, 100, arcade.color.RED, 24, bold=True)
 
     def end_game(self):
         self.wins = self.max_wins
