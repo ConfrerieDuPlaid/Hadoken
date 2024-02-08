@@ -54,6 +54,7 @@ CHARACTER_SCALING = 2
 SCREEN_WIDTH = SPRITE_SIZE * GRID_LIMIT
 SCREEN_HEIGHT = 650
 SCREEN_TITLE = "Hadoken - Street Fighter!"
+UPDATES_PER_FRAME = 5
 
 
 def distance_to_range(distance):
@@ -73,6 +74,16 @@ def arg_max(table):
 
 def sign(x):
     return 1 if x > 0 else -1 if x < 0 else 0
+
+
+def load_texture_pair(filename):
+    """
+    Load a texture pair, with the second being a mirror image.
+    """
+    return [
+        arcade.load_texture(filename),
+        arcade.load_texture(filename, flipped_horizontally=True)
+    ]
 
 
 class Environment:
@@ -206,12 +217,11 @@ class Environment:
 class Agent(arcade.Sprite):
     def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.45, discount_factor=0.55):
         super().__init__()
-        self.sprite_lists = {
-            1: arcade.Sprite(f"./tiles/{player_name}1.png", CHARACTER_SCALING),
-            -1: arcade.Sprite(f"./tiles/{player_name}-1.png", CHARACTER_SCALING)
-        }
+        self.walk_textures = []
+        self.cur_texture = 0
+        self.load_textures(player_name)
         self.orientation = environment.orientations[player_name]
-        self.player_sprite = arcade.Sprite(f"./tiles/{player_name}{default_orientation}.png", CHARACTER_SCALING)
+        self.player_sprite = arcade.Sprite(f"./tiles/{player_name}/{player_name}_idle.png", CHARACTER_SCALING)
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.env = environment
@@ -224,13 +234,37 @@ class Agent(arcade.Sprite):
         self.qtable = {}
         self.score = 0
 
+    def load_textures(self, player_name):
+        textures_path = f"./tiles/{player_name}/{player_name}"
+        self.idle_texture_pair = load_texture_pair(f"{textures_path}_idle.png")
+
+        # Load textures for walking
+        for i in range(8):
+            texture = load_texture_pair(f"{textures_path}_walk{i}.png")
+            self.walk_textures.append(texture)
+
     def set_position(self, center_x: float = 64, center_y: float = 192):
-        print(self.env.orientations[self.player_name], self.orientation)
-        if self.env.orientations[self.player_name] != self.orientation:
-            print("Turning")
-            self.player_sprite = self.sprite_lists[self.orientation]
         self.player_sprite.center_x = self.env.positions[self.player_name] * SPRITE_SIZE + SPRITE_SIZE / 2
         self.player_sprite.center_y = SPRITE_SIZE + SPRITE_SIZE
+
+    def facing(self):
+        return self.orientation == ORIENTATION_LEFT
+
+    def update_animation(self, delta_time: float = 1 / 60):
+        direction = self.facing()
+
+        # Idle animation
+        if self.change_x == 0:
+            self.texture = self.idle_texture_pair[direction]
+            return
+
+        # Walking animation
+        self.cur_texture += 1
+        if self.cur_texture > 7 * UPDATES_PER_FRAME:
+            self.cur_texture = 0
+        frame = self.cur_texture // UPDATES_PER_FRAME
+        self.texture = self.walk_textures[frame][direction]
+
 
     def reset(self):
         self.orientation = self.env.orientations[self.player_name]
@@ -355,12 +389,13 @@ class Graphic(arcade.Window):
             self.Ryu.do()
             self.Ryu.set_position()
             self.player_list[0] = self.Ryu.player_sprite
-            # self.player_list.append(self.Ryu.player_sprite)
         else:
             self.Ken.do()
             self.Ken.set_position()
             self.player_list[1] = self.Ken.player_sprite
         self.iterations += 1
+        self.player_list.update()
+        self.player_list.update_animation()
 
         # print(
         #     f"N°{self.iterations} - "
@@ -410,7 +445,6 @@ class Graphic(arcade.Window):
     def on_key_press(self, key, modifiers):
         if key == arcade.key.Q:
             self.end_game()
-        self.update_player()
 
 
 if __name__ == '__main__':
