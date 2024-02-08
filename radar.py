@@ -26,8 +26,8 @@ REWARD_LOSE = -2048
 REWARD_WALL = -128
 REWARD_HIT = 16
 REWARD_GET_HIT = -32
-REWARD_DODGE = 16
-REWARD_MOVE = -1
+REWARD_DODGE = 32
+REWARD_MOVE = -10
 REWARD_NONE = -16
 HIT_DAMAGE = 10
 
@@ -304,7 +304,7 @@ class Graphic(arcade.Window):
     def __init__(self):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         self.player_list = None
-        self.max_wins = 10
+        self.max_wins = 1000
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
@@ -415,5 +415,6 @@ class Graphic(arcade.Window):
 
 if __name__ == '__main__':
     window = Graphic()
+    window.set_update_rate(1 / 10)
     window.setup()
     window.run()
