@@ -9,10 +9,9 @@ KEN = "Ken"
 PLAYERS = [RYU, KEN]
 
 ACTION_LEFT, ACTION_RIGHT, ACTION_DODGE, ACTION_NONE = 'L', 'R', 'D', 'N'
-ACTION_PUNCH, ACTION_KICK, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_LOW_PUNCH, ACTION_HIGH_PUNCH = 'P', 'K', 'LK', 'HK', 'LP', 'HP'
-ACTIONS = [ACTION_LEFT, ACTION_RIGHT, ACTION_PUNCH, ACTION_KICK, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_LOW_PUNCH,
-           ACTION_HIGH_PUNCH, ACTION_DODGE, ACTION_NONE]
-ATTACKS = [ACTION_PUNCH, ACTION_KICK, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_LOW_PUNCH, ACTION_HIGH_PUNCH]
+ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK = 'P', 'LK', 'HK'
+ACTIONS = [ACTION_LEFT, ACTION_RIGHT, ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_DODGE, ACTION_NONE]
+ATTACKS = [ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK]
 
 ORIENTATION_LEFT, ORIENTATION_RIGHT = -1, 1
 ORIENTATIONS = [ORIENTATION_RIGHT, ORIENTATION_LEFT]
@@ -56,6 +55,16 @@ SCREEN_HEIGHT = 650
 SCREEN_TITLE = "Hadoken - Street Fighter!"
 UPDATES_PER_FRAME = 5
 
+ANIMATIONS = {
+    ACTION_NONE: "none",
+    ACTION_DODGE: "dodge",
+    ACTION_HIGH_KICK: "high_kick",
+    ACTION_LOW_KICK: "low_kick",
+    ACTION_PUNCH: "punch",
+}
+
+ANIMATIONS_LIST = list(ANIMATIONS.keys())
+
 
 def distance_to_range(distance):
     if distance == 0:
@@ -74,16 +83,6 @@ def arg_max(table):
 
 def sign(x):
     return 1 if x > 0 else -1 if x < 0 else 0
-
-
-def load_texture_pair(filename):
-    """
-    Load a texture pair, with the second being a mirror image.
-    """
-    return [
-        arcade.load_texture(filename),
-        arcade.load_texture(filename, flipped_horizontally=True)
-    ]
 
 
 class Environment:
@@ -233,24 +232,22 @@ class Agent(arcade.Sprite):
         self.scale = CHARACTER_SCALING
         self.current_animation = 0
         self.animations = []
-        self.textures = self.animations
         self.load_textures(player_name)
+        self.textures = self.animations
+
 
     def load_textures(self, player_name):
         textures_path = f"./tiles/{player_name}/{player_name}"
-        for i in range(0, 8):
-            self.animations.append(arcade.load_texture(f"{textures_path}_walk{i}.png"))
-
-
+        for k, v in ANIMATIONS.items():
+            self.animations.append(arcade.load_texture(f"{textures_path}_{v}.png"))
 
     def set_position(self, center_x: float = 64, center_y: float = 192):
         self.center_x = self.env.positions[self.player_name] * SPRITE_SIZE + SPRITE_SIZE / 2
         self.center_y = SPRITE_SIZE + SPRITE_SIZE
-        if self.current_animation > 6:
-            self.current_animation = 0
+        if self.current_action not in ANIMATIONS_LIST:
+            self.set_texture(ANIMATIONS_LIST.index(ACTION_NONE))
         else:
-            self.current_animation += 1
-        self.set_texture(self.current_animation)
+            self.set_texture(ANIMATIONS_LIST.index(self.current_action))
 
     def facing(self):
         return self.orientation == ORIENTATION_LEFT
@@ -437,6 +434,6 @@ class Graphic(arcade.Window):
 
 if __name__ == '__main__':
     window = Graphic()
-    window.set_update_rate(1 / 5)
+    window.set_update_rate(1 / 30)
     window.setup()
     window.run()
