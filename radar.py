@@ -217,11 +217,8 @@ class Environment:
 class Agent(arcade.Sprite):
     def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.45, discount_factor=0.55):
         super().__init__()
-        self.walk_textures = []
         self.cur_texture = 0
-        self.load_textures(player_name)
         self.orientation = environment.orientations[player_name]
-        self.player_sprite = arcade.Sprite(f"./tiles/{player_name}/{player_name}_idle.png", CHARACTER_SCALING)
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.env = environment
@@ -233,38 +230,30 @@ class Agent(arcade.Sprite):
         self.health = 100
         self.qtable = {}
         self.score = 0
+        self.scale = CHARACTER_SCALING
+        self.current_animation = 0
+        self.animations = []
+        self.textures = self.animations
+        self.load_textures(player_name)
 
     def load_textures(self, player_name):
         textures_path = f"./tiles/{player_name}/{player_name}"
-        self.idle_texture_pair = load_texture_pair(f"{textures_path}_idle.png")
+        for i in range(0, 8):
+            self.animations.append(arcade.load_texture(f"{textures_path}_walk{i}.png"))
 
-        # Load textures for walking
-        for i in range(8):
-            texture = load_texture_pair(f"{textures_path}_walk{i}.png")
-            self.walk_textures.append(texture)
+
 
     def set_position(self, center_x: float = 64, center_y: float = 192):
-        self.player_sprite.center_x = self.env.positions[self.player_name] * SPRITE_SIZE + SPRITE_SIZE / 2
-        self.player_sprite.center_y = SPRITE_SIZE + SPRITE_SIZE
+        self.center_x = self.env.positions[self.player_name] * SPRITE_SIZE + SPRITE_SIZE / 2
+        self.center_y = SPRITE_SIZE + SPRITE_SIZE
+        if self.current_animation > 6:
+            self.current_animation = 0
+        else:
+            self.current_animation += 1
+        self.set_texture(self.current_animation)
 
     def facing(self):
         return self.orientation == ORIENTATION_LEFT
-
-    def update_animation(self, delta_time: float = 1 / 60):
-        direction = self.facing()
-
-        # Idle animation
-        if self.change_x == 0:
-            self.texture = self.idle_texture_pair[direction]
-            return
-
-        # Walking animation
-        self.cur_texture += 1
-        if self.cur_texture > 7 * UPDATES_PER_FRAME:
-            self.cur_texture = 0
-        frame = self.cur_texture // UPDATES_PER_FRAME
-        self.texture = self.walk_textures[frame][direction]
-
 
     def reset(self):
         self.orientation = self.env.orientations[self.player_name]
@@ -366,15 +355,18 @@ class Graphic(arcade.Window):
 
     def setup(self):
         self.env = Environment()
-        self.Ryu = Agent(self.env, RYU)
-        self.Ryu.set_position()
+
         self.Ken = Agent(self.env, KEN)
         self.Ken.set_position()
+
+        self.Ryu = Agent(self.env, RYU)
+        self.Ryu.set_position()
+
         self.env.set_agents(self.Ryu, self.Ken)
 
         self.player_list = arcade.SpriteList()
-        self.player_list.append(self.Ryu.player_sprite)
-        self.player_list.append(self.Ken.player_sprite)
+        self.player_list.append(self.Ryu)
+        self.player_list.append(self.Ken)
 
         self.create_scene()
 
@@ -383,20 +375,16 @@ class Graphic(arcade.Window):
         self.wall_list.draw()
         self.player_list.draw()
 
-    def on_update(self, delta_time: float= 1 / 100000000):
+    def on_update(self, delta_time: float):
         player_start = choice(PLAYERS)
         if player_start == RYU:
             self.Ryu.do()
             self.Ryu.set_position()
-            self.player_list[0] = self.Ryu.player_sprite
         else:
             self.Ken.do()
             self.Ken.set_position()
-            self.player_list[1] = self.Ken.player_sprite
         self.iterations += 1
         self.player_list.update()
-        self.player_list.update_animation()
-
         # print(
         #     f"N°{self.iterations} - "
         #     f"Ryu: {{{self.Ryu.current_action} {self.env.orientations[RYU]}/{self.Ryu.get_health()} {self.Ryu.get_score()}}} "
@@ -449,6 +437,6 @@ class Graphic(arcade.Window):
 
 if __name__ == '__main__':
     window = Graphic()
-    window.set_update_rate(1 / 10)
+    window.set_update_rate(1 / 5)
     window.setup()
     window.run()
