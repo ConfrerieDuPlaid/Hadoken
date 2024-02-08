@@ -23,8 +23,8 @@ MOVES = {
 REWARD_WIN = 1024
 REWARD_LOSE = -2048
 REWARD_WALL = -128
-REWARD_HIT = 16
-REWARD_GET_HIT = -32
+REWARD_HIT = 32
+REWARD_GET_HIT = -64
 REWARD_DODGE = 32
 REWARD_MOVE = -10
 REWARD_NONE = -16
@@ -214,7 +214,7 @@ class Environment:
 
 
 class Agent(arcade.Sprite):
-    def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.45, discount_factor=0.55):
+    def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.80, discount_factor=0.60):
         super().__init__()
         self.cur_texture = 0
         self.orientation = environment.orientations[player_name]
@@ -259,7 +259,7 @@ class Agent(arcade.Sprite):
         self.score = 0
 
     def choose_action(self):
-        if random() < 0.5:
+        if random() < 0.25:
             self.current_action = choice(ACTIONS)
             return
         self.add_qtable_state(self.state)
@@ -324,7 +324,7 @@ class Graphic(arcade.Window):
     def __init__(self):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         self.player_list = None
-        self.max_wins = 1000
+        self.max_wins = 100
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
@@ -382,19 +382,13 @@ class Graphic(arcade.Window):
             self.Ken.set_position()
         self.iterations += 1
         self.player_list.update()
-        # print(
-        #     f"N°{self.iterations} - "
-        #     f"Ryu: {{{self.Ryu.current_action} {self.env.orientations[RYU]}/{self.Ryu.get_health()} {self.Ryu.get_score()}}} "
-        #     f"Ken: {{{self.Ken.current_action} {self.env.orientations[KEN]}/{self.Ken.get_health()} {self.Ken.get_score()}}} ",
-        #     end="")
-        self.env.print_map()
 
         if self.Ryu.is_dead() or self.Ken.is_dead():
             if self.Ryu.is_dead():
                 self.Ryu.lose()
                 self.Ken.win()
                 self.ken_wins += 1
-                print("RYU WINS!")
+                print("KEN WINS!")
                 # self.display_victory(KEN)
             else:
                 self.Ryu.win()
@@ -434,6 +428,6 @@ class Graphic(arcade.Window):
 
 if __name__ == '__main__':
     window = Graphic()
-    window.set_update_rate(1 / 30)
+    window.set_update_rate(1 / 6000000)
     window.setup()
     window.run()
