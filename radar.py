@@ -304,7 +304,7 @@ class Graphic(arcade.Window):
     def __init__(self):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         self.player_list = None
-        self.max_wins = 1
+        self.max_wins = 10
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
@@ -344,14 +344,12 @@ class Graphic(arcade.Window):
 
         self.create_scene()
 
-        arcade.schedule(self.on_update, 1 / 30)
-
     def on_draw(self):
         self.clear()
         self.wall_list.draw()
         self.player_list.draw()
 
-    def on_update(self, delta_time: float):
+    def on_update(self, delta_time: float= 1 / 100000000):
         player_start = choice(PLAYERS)
         if player_start == RYU:
             self.Ryu.do()
