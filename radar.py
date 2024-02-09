@@ -1,4 +1,5 @@
 import pickle
+from os.path import exists
 
 from matplotlib import pyplot as plt
 from random import random, choice
@@ -20,14 +21,14 @@ MOVES = {
     ACTION_RIGHT: (1, ORIENTATION_RIGHT),
 }
 
-REWARD_WIN = 1024
+REWARD_WIN = 4096
 REWARD_LOSE = -2048
 REWARD_WALL = -128
-REWARD_HIT = 32
-REWARD_GET_HIT = -64
+REWARD_HIT = 64
+REWARD_GET_HIT = -32
 REWARD_DODGE = 32
-REWARD_MOVE = -10
-REWARD_NONE = -16
+REWARD_MOVE = -1
+REWARD_NONE = -45
 HIT_DAMAGE = 10
 
 DISTANCE_NONE, DISTANCE_NEAR, DISTANCE_MID, DISTANCE_FAR = '0', 'N', 'M', 'F'
@@ -214,7 +215,7 @@ class Environment:
 
 
 class Agent(arcade.Sprite):
-    def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.80, discount_factor=0.60):
+    def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.50, discount_factor=0.70):
         super().__init__()
         self.cur_texture = 0
         self.orientation = environment.orientations[player_name]
@@ -241,6 +242,12 @@ class Agent(arcade.Sprite):
         for k, v in ANIMATIONS.items():
             self.animations.append(arcade.load_texture(f"{textures_path}_{v}.png"))
 
+    def load_qtable(self, filename):
+        if exists(filename):
+            with open(filename, 'rb') as file:
+                self.qtable = pickle.load(file)
+            self.reset()
+
     def set_position(self, center_x: float = 64, center_y: float = 192):
         self.center_x = self.env.positions[self.player_name] * SPRITE_SIZE + SPRITE_SIZE / 2
         self.center_y = SPRITE_SIZE + SPRITE_SIZE
@@ -259,7 +266,7 @@ class Agent(arcade.Sprite):
         self.score = 0
 
     def choose_action(self):
-        if random() < 0.25:
+        if random() < 0.4:
             self.current_action = choice(ACTIONS)
             return
         self.add_qtable_state(self.state)
@@ -324,7 +331,7 @@ class Graphic(arcade.Window):
     def __init__(self):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         self.player_list = None
-        self.max_wins = 100
+        self.max_wins = 2000
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
@@ -355,8 +362,11 @@ class Graphic(arcade.Window):
 
         self.Ken = Agent(self.env, KEN)
         self.Ken.set_position()
+        self.Ken.load_qtable("KenQtable.qtable")
 
         self.Ryu = Agent(self.env, RYU)
+        self.Ryu.load_qtable("RyuQtable.qtable")
+
         self.Ryu.set_position()
 
         self.env.set_agents(self.Ryu, self.Ken)
@@ -388,21 +398,19 @@ class Graphic(arcade.Window):
                 self.Ryu.lose()
                 self.Ken.win()
                 self.ken_wins += 1
-                print("KEN WINS!")
                 # self.display_victory(KEN)
             else:
                 self.Ryu.win()
                 self.Ken.lose()
                 self.ryu_wins += 1
                 # self.display_victory(RYU)
-                print("RYU WINS!")
             self.env.reset()
             self.ken_score.append(self.Ken.get_score())
             self.ryu_score.append(self.Ryu.get_score())
             self.Ryu.reset()
             self.Ken.reset()
             self.wins += 1
-
+            print(self.ken_wins + self.ryu_wins)
         if self.wins >= self.max_wins:
             self.end_game()
             exit(0)
@@ -428,6 +436,6 @@ class Graphic(arcade.Window):
 
 if __name__ == '__main__':
     window = Graphic()
-    window.set_update_rate(1 / 6000000)
+    window.set_update_rate(1 / 999999999)
     window.setup()
     window.run()
