@@ -295,13 +295,19 @@ class Agent(arcade.Sprite):
     def load_textures(self, player_name):
         textures_path = f"./tiles/{player_name}/{player_name}"
         for k, v in ANIMATIONS.items():
-            self.animations.append(arcade.load_texture(f"{textures_path}_{v}.png"))
+            self.animations.append(arcade.load_texture(f"{textures_path}_{v}1.png"))
+            self.animations.append(arcade.load_texture(f"{textures_path}_{v}-1.png"))
 
     def load_qtable(self, filename):
         if exists(filename):
             with open(filename, 'rb') as file:
                 self.qtable = pickle.load(file)
             self.reset()
+
+    def animation_index(self, action):
+        if (self.orientation == ORIENTATION_LEFT):
+            return 2 * ANIMATIONS_LIST.index(action) + 1
+        return 2 * ANIMATIONS_LIST.index(action)
 
     def set_position(self, center_x: float = 64, center_y: float = 192):
         self.center_x = self.env.positions[self.player_name] * SPRITE_SIZE + SPRITE_SIZE / 2
