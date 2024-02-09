@@ -9,10 +9,10 @@ RYU = "Ryu"
 KEN = "Ken"
 PLAYERS = [RYU, KEN]
 
-ACTION_LEFT, ACTION_RIGHT, ACTION_DODGE, ACTION_NONE = 'L', 'R', 'D', 'N'
+ACTION_LEFT, ACTION_RIGHT, ACTION_JUMP, ACTION_CROUCH, ACTION_DODGE, ACTION_NONE = 'L', 'R', 'J', 'C', 'D', 'N'
 ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK = 'P', 'LK', 'HK'
 ACTIONS = [ACTION_LEFT, ACTION_RIGHT, ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_DODGE, ACTION_NONE]
-ATTACKS = [ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK]
+ATTACKS = [ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK]  # todo add jump and crouch to actions
 
 ORIENTATION_LEFT, ORIENTATION_RIGHT = -1, 1
 ORIENTATIONS = [ORIENTATION_RIGHT, ORIENTATION_LEFT]
@@ -41,6 +41,23 @@ DISTANCES = {
 
 STANCE_STANDING, STANCE_CROUCHING, STANCE_JUMPING = 'S', 'C', 'J'
 STANCES = [STANCE_STANDING, STANCE_CROUCHING, STANCE_JUMPING]
+STANCE_HIT_MAP = {
+    STANCE_JUMPING: {
+        STANCE_JUMPING: [ACTION_PUNCH],
+        STANCE_STANDING: [ACTION_LOW_KICK],
+        STANCE_CROUCHING: [],
+    },
+    STANCE_STANDING: {
+        STANCE_JUMPING: [ACTION_HIGH_KICK],
+        STANCE_STANDING: [ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK],
+        STANCE_CROUCHING: [ACTION_LOW_KICK],
+    },
+    STANCE_CROUCHING: {
+        STANCE_JUMPING: [],
+        STANCE_STANDING: [ACTION_HIGH_KICK, ACTION_PUNCH],
+        STANCE_CROUCHING: [ACTION_PUNCH, ACTION_LOW_KICK],
+    },
+}
 
 WALL = '#'
 GRID_LIMIT = 10
@@ -99,6 +116,10 @@ class Environment:
             RYU: ORIENTATION_RIGHT,
             KEN: ORIENTATION_LEFT,
         }
+        self.stances = {
+            RYU: STANCE_STANDING,
+            KEN: STANCE_STANDING,
+        }
         self.radars = {
             RYU: self.get_radar(RYU),
             KEN: self.get_radar(KEN),
@@ -117,6 +138,10 @@ class Environment:
             RYU: ORIENTATION_RIGHT,
             KEN: ORIENTATION_LEFT,
         }
+        self.stances = {
+            RYU: STANCE_STANDING,
+            KEN: STANCE_STANDING,
+        }
         self.radars = {
             RYU: self.get_radar(RYU),
             KEN: self.get_radar(KEN),
@@ -126,7 +151,8 @@ class Environment:
         self.agents[RYU] = ryu
         self.agents[KEN] = ken
 
-    def opponent(self, player):
+    @staticmethod
+    def opponent(player):
         if player == KEN:
             return RYU
         return KEN
@@ -156,14 +182,26 @@ class Environment:
         return REWARD_MOVE
 
     def is_within_range(self, attacker, attack):
+        player_stance = self.stances[attacker]
+        opponent_stance = self.stances[self.opponent(attacker)]
+        if attack not in STANCE_HIT_MAP[player_stance][opponent_stance]:
+            return False
         radar = self.get_radar(attacker)
         target = radar[3 + self.orientations[attacker]]
         return target != WALL and target != '_'  # todo not = self
+
+    def reset_player_stance(self, player):
+        if self.stances == STANCE_STANDING:
+            return
+        previous_action = self.agents[player].previous_actions[1]
+        if previous_action == ACTION_JUMP or previous_action == ACTION_CROUCH:
+            self.stances[player] = STANCE_STANDING
 
     def do(self, player):
         reward = 0
         last_opponent_action = self.agents[self.opponent(player)].current_action
         damage_inflicted = False
+        self.reset_player_stance(player)
         action = self.agents[player].current_action
         if action in MOVES:
             was_within_range = self.is_within_range(player, action)
@@ -194,7 +232,7 @@ class Environment:
         if damage_inflicted:
             self.inflict_damage_to(self.opponent(player))
 
-        return reward, (self.get_radar(player), self.orientations[player])
+        return reward, (self.get_radar(player), self.orientations[player], self.stances[player])
 
     def inflict_damage_to(self, opponent):
         self.agents[opponent].get_hit()
@@ -223,8 +261,9 @@ class Agent(arcade.Sprite):
         self.discount_factor = discount_factor
         self.env = environment
         self.state = environment.radars[player_name]
+        self.stance = STANCE_STANDING
         self.previous_state = self.state
-        self.previous_action = ACTION_NONE
+        self.previous_actions = [ACTION_NONE, ACTION_NONE, ACTION_NONE]
         self.current_action = ACTION_NONE
         self.player_name = player_name
         self.health = 100
@@ -235,7 +274,6 @@ class Agent(arcade.Sprite):
         self.animations = []
         self.load_textures(player_name)
         self.textures = self.animations
-
 
     def load_textures(self, player_name):
         textures_path = f"./tiles/{player_name}/{player_name}"
@@ -284,7 +322,7 @@ class Agent(arcade.Sprite):
         self.add_qtable_state(prev_state)
         self.add_qtable_state(new_state)
         max_q = max(self.qtable[new_state].values())
-        self.qtable[prev_state][self.previous_action] += self.learning_rate * (
+        self.qtable[prev_state][self.previous_actions[0]] += self.learning_rate * (
                 reward + self.discount_factor * max_q - self.qtable[prev_state][self.current_action])
 
     def do(self):
@@ -294,9 +332,13 @@ class Agent(arcade.Sprite):
 
         self.update_qtable(reward, self.state, new_state)
         self.previous_state = self.state
-        self.previous_action = self.current_action
+        self.push_previous_action()
         self.state = new_state
         return self.current_action
+
+    def push_previous_action(self):
+        self.previous_actions.pop()
+        self.previous_actions.insert(0, self.current_action)
 
     def get_state(self):
         return f"{self.previous_state} {self.qtable[self.previous_state]}"
@@ -315,11 +357,11 @@ class Agent(arcade.Sprite):
 
     def win(self):
         self.score += REWARD_WIN
-        self.update_qtable(REWARD_WIN, self.previous_state, self.state, action_taken=self.previous_action)
+        self.update_qtable(REWARD_WIN, self.previous_state, self.state, action_taken=self.previous_actions)
 
     def lose(self):
         self.score += REWARD_LOSE
-        self.update_qtable(REWARD_LOSE, self.previous_state, self.state, action_taken=self.previous_action)
+        self.update_qtable(REWARD_LOSE, self.previous_state, self.state, action_taken=self.previous_actions)
 
     def save(self, filename):
         with open(filename, 'wb') as file:
@@ -331,7 +373,7 @@ class Graphic(arcade.Window):
     def __init__(self):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         self.player_list = None
-        self.max_wins = 2000
+        self.max_wins = 10
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
