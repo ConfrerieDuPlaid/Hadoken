@@ -21,14 +21,14 @@ MOVES = {
     ACTION_RIGHT: (1, ORIENTATION_RIGHT),
 }
 
-REWARD_WIN = 4096
-REWARD_LOSE = -2048
-REWARD_WALL = -128
-REWARD_HIT = 64
-REWARD_GET_HIT = -32
-REWARD_DODGE = 32
+REWARD_WIN = 100
+REWARD_LOSE = -200
+REWARD_WALL = -2
+REWARD_HIT = 10
+REWARD_GET_HIT = -20
+REWARD_DODGE = 12
 REWARD_MOVE = -1
-REWARD_NONE = -45
+REWARD_NONE = -1
 HIT_DAMAGE = 10
 
 DISTANCE_NONE, DISTANCE_NEAR, DISTANCE_MID, DISTANCE_FAR = '0', 'N', 'M', 'F'
@@ -237,9 +237,9 @@ class Agent:
         self.score = 0
 
     def choose_action(self):
-        if random() < self.noise:
-            self.current_action = choice(ACTIONS)
-            return
+        # if random() < self.noise:
+        #     self.current_action = choice(ACTIONS)
+        #     return
         self.add_qtable_state(self.state)
         self.current_action = arg_max(self.qtable[self.state])
 
@@ -351,7 +351,7 @@ class NonGraphic():
                 self.Ryu.reset()
                 self.Ken.reset()
                 self.wins += 1
-                print(self.ken_wins + self.ryu_wins)
+                # print(self.ken_wins + self.ryu_wins)
             if self.Ken.get_score() < -35000 or self.Ryu.get_score() < -35000:
                 self.end_game()
                 exit(0)
@@ -374,13 +374,21 @@ class NonGraphic():
         plt.plot(self.ken_score, label="Ken")
         # self.Ryu.save("RyuQtable.qtable")
         # self.Ken.save("KenQtable.qtable")
-        print(f"Ryu wins: {self.ryu_wins}, Ken wins: {self.ken_wins}")
-        plt.legend()
-        plt.savefig(f"graphs/l_{self.learning_rate}_d_{self.discount_factor}_n_{self.noise}.png")
+        # print(f"Ryu wins: {self.ryu_wins}, Ken wins: {self.ken_wins}")
+        if self.wins > 100:
+            scale = 4
+            if self.wins < 5000:
+                scale = 3
+            if self.wins < 1000:
+                scale = 2
+            if self.wins < 500:
+                scale = 1
+            plt.legend()
+            plt.savefig(f"graphs/{scale}/l_{self.learning_rate}_d_{self.discount_factor}_n_{self.noise}.png")
 
 if __name__ == '__main__':
-    window = NonGraphic(learning_rate=float(sys.argv[1]),
-                     discount_factor=float(sys.argv[2]),
-                     noise=float(sys.argv[3]))
+    window = NonGraphic(learning_rate=float(sys.argv[1]) / 100.0,
+                     discount_factor=float(sys.argv[2]) / 100.0,
+                     noise=float(sys.argv[3]) / 100.0)
     window.setup()
     window.run()
