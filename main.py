@@ -4,7 +4,6 @@ from os.path import exists
 
 from matplotlib import pyplot as plt
 from random import random, choice
-import arcade
 
 RYU = "Ryu"
 KEN = "Ken"
@@ -47,25 +46,6 @@ WALL = '#'
 GRID_LIMIT = 10
 KEN_START = 2
 RYU_START = 6
-
-SPRITE_SIZE = 128
-SPRITE_SCALE = 1
-CHARACTER_SCALING = 2
-
-SCREEN_WIDTH = SPRITE_SIZE * GRID_LIMIT
-SCREEN_HEIGHT = 650
-SCREEN_TITLE = "Hadoken - Street Fighter!"
-UPDATES_PER_FRAME = 5
-
-ANIMATIONS = {
-    ACTION_NONE: "none",
-    ACTION_DODGE: "dodge",
-    ACTION_HIGH_KICK: "high_kick",
-    ACTION_LOW_KICK: "low_kick",
-    ACTION_PUNCH: "punch",
-}
-
-ANIMATIONS_LIST = list(ANIMATIONS.keys())
 
 NOISES = (30, 50)  # 80
 LEARNING_RATES = (20, 40)  # 90
@@ -220,7 +200,7 @@ class Environment:
         print()
 
 
-class Agent(arcade.Sprite):
+class Agent:
     def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.50, discount_factor=0.70,
                  noise=0.5):
         super().__init__()
@@ -237,33 +217,15 @@ class Agent(arcade.Sprite):
         self.health = 100
         self.qtable = {}
         self.score = 0
-        self.scale = CHARACTER_SCALING
-        self.current_animation = 0
-        self.animations = []
-        self.load_textures(player_name)
-        self.textures = self.animations
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.noise = noise
-
-    def load_textures(self, player_name):
-        textures_path = f"./tiles/{player_name}/{player_name}"
-        for k, v in ANIMATIONS.items():
-            self.animations.append(arcade.load_texture(f"{textures_path}_{v}.png"))
 
     def load_qtable(self, filename):
         if exists(filename):
             with open(filename, 'rb') as file:
                 self.qtable = pickle.load(file)
             self.reset()
-
-    def set_position(self, center_x: float = 64, center_y: float = 192):
-        self.center_x = self.env.positions[self.player_name] * SPRITE_SIZE + SPRITE_SIZE / 2
-        self.center_y = SPRITE_SIZE + SPRITE_SIZE
-        if self.current_action not in ANIMATIONS_LIST:
-            self.set_texture(ANIMATIONS_LIST.index(ACTION_NONE))
-        else:
-            self.set_texture(ANIMATIONS_LIST.index(self.current_action))
 
     def facing(self):
         return self.orientation == ORIENTATION_LEFT
@@ -335,9 +297,8 @@ class Agent(arcade.Sprite):
             pickle.dump(self.qtable, file)
 
 
-class Graphic(arcade.Window):
+class NonGraphic():
     def __init__(self, learning_rate=0.5, discount_factor=0.5, noise=0.5):
-        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, visible=False)
         self.player_list = None
         self.max_wins = 2000
         self.ryu_wins = 0
@@ -357,102 +318,69 @@ class Graphic(arcade.Window):
         self.discount_factor = discount_factor
         self.noise = noise
 
-    def create_scene(self):
-        self.scene = arcade.Scene()
-        self.background_color = arcade.csscolor.CORNFLOWER_BLUE
-        self.wall_list = arcade.SpriteList(use_spatial_hash=True)
-
-        for x in range(0, SPRITE_SIZE * GRID_LIMIT, SPRITE_SIZE):
-            wall = arcade.Sprite("./tiles/grassMid.png", SPRITE_SCALE)
-            wall.center_x = x + SPRITE_SIZE / 2
-            wall.center_y = SPRITE_SIZE / 2
-            self.wall_list.append(wall)
-
     def setup(self):
         self.env = Environment()
 
         self.Ken = Agent(self.env, KEN, learning_rate=self.learning_rate, discount_factor=self.discount_factor,
                          noise=self.noise)
-        self.Ken.set_position()
-        self.Ken.load_qtable("KenQtable.qtable")
+        # self.Ken.load_qtable("KenQtable.qtable")
 
         self.Ryu = Agent(self.env, RYU, learning_rate=self.learning_rate, discount_factor=self.discount_factor,
                          noise=self.noise)
-        self.Ryu.load_qtable("RyuQtable.qtable")
-
-        self.Ryu.set_position()
+        # self.Ryu.load_qtable("RyuQtable.qtable")
 
         self.env.set_agents(self.Ryu, self.Ken)
 
-        self.player_list = arcade.SpriteList()
-        self.player_list.append(self.Ryu)
-        self.player_list.append(self.Ken)
+    def run(self):
+        while self.wins < self.max_wins:
+            self.update()
+            if self.Ryu.is_dead() or self.Ken.is_dead():
+                if self.Ryu.is_dead():
+                    self.Ryu.lose()
+                    self.Ken.win()
+                    self.ken_wins += 1
+                    # self.display_victory(KEN)
+                else:
+                    self.Ryu.win()
+                    self.Ken.lose()
+                    self.ryu_wins += 1
+                    # self.display_victory(RYU)
+                self.env.reset()
+                self.ken_score.append(self.Ken.get_score())
+                self.ryu_score.append(self.Ryu.get_score())
+                self.Ryu.reset()
+                self.Ken.reset()
+                self.wins += 1
+                print(self.ken_wins + self.ryu_wins)
+            if self.Ken.get_score() < -35000 or self.Ryu.get_score() < -35000:
+                self.end_game()
+                exit(0)
+            if self.wins >= self.max_wins:
+                self.end_game()
+                exit(0)
 
-        self.create_scene()
-
-    def on_draw(self):
-        self.clear()
-        self.wall_list.draw()
-        self.player_list.draw()
-
-    def on_update(self, delta_time: float):
+    def update(self):
         player_start = choice(PLAYERS)
         if player_start == RYU:
             self.Ryu.do()
-            self.Ryu.set_position()
         else:
             self.Ken.do()
-            self.Ken.set_position()
         self.iterations += 1
-        self.player_list.update()
-
-        if self.Ryu.is_dead() or self.Ken.is_dead():
-            if self.Ryu.is_dead():
-                self.Ryu.lose()
-                self.Ken.win()
-                self.ken_wins += 1
-                # self.display_victory(KEN)
-            else:
-                self.Ryu.win()
-                self.Ken.lose()
-                self.ryu_wins += 1
-                # self.display_victory(RYU)
-            self.env.reset()
-            self.ken_score.append(self.Ken.get_score())
-            self.ryu_score.append(self.Ryu.get_score())
-            self.Ryu.reset()
-            self.Ken.reset()
-            self.wins += 1
-            print(self.ken_wins + self.ryu_wins)
-        if self.Ken.get_score() < -35000 or self.Ryu.get_score() < -35000:
-            self.end_game()
-            exit(0)
-        if self.wins >= self.max_wins:
-            self.end_game()
-            exit(0)
-
-    def display_victory(self, winner):
-        arcade.draw_text(f"{winner} wins!", 100, 100, arcade.color.RED, 24, bold=True)
 
     def end_game(self):
         self.wins = self.max_wins
         self.env.reset()
         plt.plot(self.ryu_score, label="Ryu")
         plt.plot(self.ken_score, label="Ken")
-        self.Ryu.save("RyuQtable.qtable")
-        self.Ken.save("KenQtable.qtable")
+        # self.Ryu.save("RyuQtable.qtable")
+        # self.Ken.save("KenQtable.qtable")
         print(f"Ryu wins: {self.ryu_wins}, Ken wins: {self.ken_wins}")
         plt.legend()
         plt.savefig(f"graphs/l_{self.learning_rate}_d_{self.discount_factor}_n_{self.noise}.png")
 
-    def on_key_press(self, key, modifiers):
-        if key == arcade.key.Q:
-            self.end_game()
-
 if __name__ == '__main__':
-    window = Graphic(learning_rate=float(sys.argv[1]),
+    window = NonGraphic(learning_rate=float(sys.argv[1]),
                      discount_factor=float(sys.argv[2]),
                      noise=float(sys.argv[3]))
-    window.set_update_rate(1 / 999999999)
     window.setup()
     window.run()
