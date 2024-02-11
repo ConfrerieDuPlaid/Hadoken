@@ -340,7 +340,7 @@ class Graphic(arcade.Window):
     def __init__(self, learning_rate=0.5, discount_factor=0.5, noise=0.5):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         self.player_list = None
-        self.max_wins = 10
+        self.max_wins = 100
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
