@@ -5,6 +5,10 @@ from matplotlib import pyplot as plt
 from random import random, choice
 import arcade
 
+from threading import Thread
+from time import sleep
+
+
 RYU = "Ryu"
 KEN = "Ken"
 PLAYERS = [RYU, KEN]
@@ -66,9 +70,9 @@ ANIMATIONS = {
 
 ANIMATIONS_LIST = list(ANIMATIONS.keys())
 
-NOISES = (30, 80)
-LEARNING_RATES = (20, 90)
-DISCOUNT_FACTORS = (20, 90)
+NOISES = (30, 50) # 80
+LEARNING_RATES = (20, 40)  # 90
+DISCOUNT_FACTORS = (20, 40)  # 90
 
 
 def distance_to_range(distance):
@@ -167,6 +171,7 @@ class Environment:
     def do(self, player):
         reward = 0
         last_opponent_action = self.agents[self.opponent(player)].current_action
+
         damage_inflicted = False
         action = self.agents[player].current_action
         if action in MOVES:
@@ -219,7 +224,7 @@ class Environment:
 
 
 class Agent(arcade.Sprite):
-    def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.50, discount_factor=0.70):
+    def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.50, discount_factor=0.70, noise=0.5):
         super().__init__()
         self.cur_texture = 0
         self.orientation = environment.orientations[player_name]
@@ -239,7 +244,9 @@ class Agent(arcade.Sprite):
         self.animations = []
         self.load_textures(player_name)
         self.textures = self.animations
-
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
+        self.noise = noise
 
     def load_textures(self, player_name):
         textures_path = f"./tiles/{player_name}/{player_name}"
@@ -270,7 +277,7 @@ class Agent(arcade.Sprite):
         self.score = 0
 
     def choose_action(self):
-        if random() < 0.4:
+        if random() < self.noise:
             self.current_action = choice(ACTIONS)
             return
         self.add_qtable_state(self.state)
@@ -332,7 +339,7 @@ class Agent(arcade.Sprite):
 
 class Graphic(arcade.Window):
 
-    def __init__(self):
+    def __init__(self, learning_rate=0.5, discount_factor=0.5, noise=0.5):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         self.player_list = None
         self.max_wins = 2000
@@ -349,6 +356,9 @@ class Graphic(arcade.Window):
         self.camera = None
         self.scene = None
         self.wall_list = None
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
+        self.noise = noise
 
     def create_scene(self):
         self.scene = arcade.Scene()
@@ -364,11 +374,11 @@ class Graphic(arcade.Window):
     def setup(self):
         self.env = Environment()
 
-        self.Ken = Agent(self.env, KEN)
+        self.Ken = Agent(self.env, KEN, learning_rate=self.learning_rate, discount_factor=self.discount_factor, noise=self.noise)
         self.Ken.set_position()
         self.Ken.load_qtable("KenQtable.qtable")
 
-        self.Ryu = Agent(self.env, RYU)
+        self.Ryu = Agent(self.env, RYU, learning_rate=self.learning_rate, discount_factor=self.discount_factor, noise=self.noise)
         self.Ryu.load_qtable("RyuQtable.qtable")
 
         self.Ryu.set_position()
@@ -437,17 +447,20 @@ class Graphic(arcade.Window):
         if key == arcade.key.Q:
             self.end_game()
 
+def threaded_games(learning_rate, discount_factor, noise):
+    print(f'noise: {noise}, learning_rate: {learning_rate}, discount_factor: {discount_factor}')
+    window = Graphic(learning_rate=learning_rate,
+                     discount_factor=discount_factor,
+                     noise=noise)
+    window.set_update_rate(1 / 999999999)
+    window.setup()
+    window.run()
 
 if __name__ == '__main__':
     for noise in range(NOISES[0], NOISES[1] + 10, 10):
-        noise = noise / 100
+        NOISE = noise / 100
         for learning_rate in range(LEARNING_RATES[0], LEARNING_RATES[1] + 10, 10):
-            learning_rate = learning_rate / 100
             for discount_factor in range(DISCOUNT_FACTORS[0], DISCOUNT_FACTORS[1] + 10, 10):
-                discount_factor = discount_factor / 100
-                print(f'noise: {noise}, learning_rate: {learning_rate}, discount_factor: {discount_factor}')
-
-    #window = Graphic()
-    #window.set_update_rate(1 / 999999999)
-    #window.setup()
-    #window.run()
+                thread = Thread(target=threaded_games, args=(learning_rate/100, discount_factor / 100, noise / 100))
+                thread.start()
+                thread.join()
