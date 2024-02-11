@@ -336,11 +336,10 @@ class Agent(arcade.Sprite):
 
 
 class Graphic(arcade.Window):
-
     def __init__(self, learning_rate=0.5, discount_factor=0.5, noise=0.5):
-        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, visible=False)
         self.player_list = None
-        self.max_wins = 100
+        self.max_wins = 2000
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
@@ -425,6 +424,9 @@ class Graphic(arcade.Window):
             self.Ken.reset()
             self.wins += 1
             print(self.ken_wins + self.ryu_wins)
+        if self.Ken.get_score() < -35000 or self.Ryu.get_score() < -35000:
+            self.end_game()
+            exit(0)
         if self.wins >= self.max_wins:
             self.end_game()
             exit(0)
