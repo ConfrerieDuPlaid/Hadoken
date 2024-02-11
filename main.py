@@ -5,10 +5,6 @@ from matplotlib import pyplot as plt
 from random import random, choice
 import arcade
 
-from threading import Thread
-from time import sleep
-
-
 RYU = "Ryu"
 KEN = "Ken"
 PLAYERS = [RYU, KEN]
@@ -70,7 +66,7 @@ ANIMATIONS = {
 
 ANIMATIONS_LIST = list(ANIMATIONS.keys())
 
-NOISES = (30, 50) # 80
+NOISES = (30, 50)  # 80
 LEARNING_RATES = (20, 40)  # 90
 DISCOUNT_FACTORS = (20, 40)  # 90
 
@@ -224,7 +220,8 @@ class Environment:
 
 
 class Agent(arcade.Sprite):
-    def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.50, discount_factor=0.70, noise=0.5):
+    def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.50, discount_factor=0.70,
+                 noise=0.5):
         super().__init__()
         self.cur_texture = 0
         self.orientation = environment.orientations[player_name]
@@ -374,11 +371,13 @@ class Graphic(arcade.Window):
     def setup(self):
         self.env = Environment()
 
-        self.Ken = Agent(self.env, KEN, learning_rate=self.learning_rate, discount_factor=self.discount_factor, noise=self.noise)
+        self.Ken = Agent(self.env, KEN, learning_rate=self.learning_rate, discount_factor=self.discount_factor,
+                         noise=self.noise)
         self.Ken.set_position()
         self.Ken.load_qtable("KenQtable.qtable")
 
-        self.Ryu = Agent(self.env, RYU, learning_rate=self.learning_rate, discount_factor=self.discount_factor, noise=self.noise)
+        self.Ryu = Agent(self.env, RYU, learning_rate=self.learning_rate, discount_factor=self.discount_factor,
+                         noise=self.noise)
         self.Ryu.load_qtable("RyuQtable.qtable")
 
         self.Ryu.set_position()
@@ -447,7 +446,8 @@ class Graphic(arcade.Window):
         if key == arcade.key.Q:
             self.end_game()
 
-def threaded_games(learning_rate, discount_factor, noise):
+
+def run_game(learning_rate, discount_factor, noise):
     print(f'noise: {noise}, learning_rate: {learning_rate}, discount_factor: {discount_factor}')
     window = Graphic(learning_rate=learning_rate,
                      discount_factor=discount_factor,
@@ -456,11 +456,10 @@ def threaded_games(learning_rate, discount_factor, noise):
     window.setup()
     window.run()
 
+
 if __name__ == '__main__':
     for noise in range(NOISES[0], NOISES[1] + 10, 10):
         NOISE = noise / 100
         for learning_rate in range(LEARNING_RATES[0], LEARNING_RATES[1] + 10, 10):
             for discount_factor in range(DISCOUNT_FACTORS[0], DISCOUNT_FACTORS[1] + 10, 10):
-                thread = Thread(target=threaded_games, args=(learning_rate/100, discount_factor / 100, noise / 100))
-                thread.start()
-                thread.join()
+                run_game(learning_rate / 100, discount_factor / 100, noise / 100)
