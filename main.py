@@ -160,11 +160,11 @@ class Environment:
 
         if action in ATTACKS:
             if self.is_within_range(player, action):
-                if last_opponent_action == ACTION_DODGE:
-                    reward -= REWARD_HIT
-                else:
-                    reward += REWARD_HIT
-                    damage_inflicted = True
+                # if last_opponent_action == ACTION_DODGE:
+                #     reward -= REWARD_HIT
+                # else:
+                reward += REWARD_HIT
+                damage_inflicted = True
             else:
                 reward -= REWARD_HIT
 
@@ -175,7 +175,7 @@ class Environment:
                 reward -= REWARD_DODGE
 
         if action == ACTION_NONE:
-            reward -= REWARD_NONE
+            reward += REWARD_NONE
 
         if damage_inflicted:
             self.inflict_damage_to(self.opponent(player))
@@ -237,9 +237,9 @@ class Agent:
         self.score = 0
 
     def choose_action(self):
-        # if random() < self.noise:
-        #     self.current_action = choice(ACTIONS)
-        #     return
+        if random() < self.noise:
+            self.current_action = choice(ACTIONS)
+            return
         self.add_qtable_state(self.state)
         self.current_action = arg_max(self.qtable[self.state])
 
@@ -297,10 +297,10 @@ class Agent:
             pickle.dump(self.qtable, file)
 
 
-class NonGraphic():
+class NonGraphic:
     def __init__(self, learning_rate=0.5, discount_factor=0.5, noise=0.5):
         self.player_list = None
-        self.max_wins = 2000
+        self.max_wins = 500
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
@@ -317,6 +317,7 @@ class NonGraphic():
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.noise = noise
+        self.exit_game = False
 
     def setup(self):
         self.env = Environment()
@@ -332,7 +333,7 @@ class NonGraphic():
         self.env.set_agents(self.Ryu, self.Ken)
 
     def run(self):
-        while self.wins < self.max_wins:
+        while self.wins < self.max_wins and not self.exit_game:
             self.update()
             if self.Ryu.is_dead() or self.Ken.is_dead():
                 if self.Ryu.is_dead():
@@ -368,7 +369,7 @@ class NonGraphic():
         self.iterations += 1
 
     def end_game(self):
-        self.wins = self.max_wins
+        # self.wins = self.max_wins
         self.env.reset()
         plt.plot(self.ryu_score, label="Ryu")
         plt.plot(self.ken_score, label="Ken")
@@ -376,15 +377,10 @@ class NonGraphic():
         # self.Ken.save("KenQtable.qtable")
         # print(f"Ryu wins: {self.ryu_wins}, Ken wins: {self.ken_wins}")
         if self.wins > 100:
-            scale = 4
-            if self.wins < 5000:
-                scale = 3
-            if self.wins < 1000:
-                scale = 2
-            if self.wins < 500:
-                scale = 1
             plt.legend()
-            plt.savefig(f"graphs/{scale}/l_{self.learning_rate}_d_{self.discount_factor}_n_{self.noise}.png")
+            plt.savefig(f"graphs/{self.wins}_{self.learning_rate}_d_{self.discount_factor}_n_{self.noise}.png")
+            self.exit_game = True
+
 
 if __name__ == '__main__':
     window = NonGraphic(learning_rate=float(sys.argv[1]) / 100.0,
