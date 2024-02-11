@@ -1,4 +1,5 @@
 import pickle
+import sys
 from os.path import exists
 
 from matplotlib import pyplot as plt
@@ -339,7 +340,7 @@ class Graphic(arcade.Window):
     def __init__(self, learning_rate=0.5, discount_factor=0.5, noise=0.5):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         self.player_list = None
-        self.max_wins = 2000
+        self.max_wins = 10
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
@@ -440,25 +441,16 @@ class Graphic(arcade.Window):
         self.Ken.save("KenQtable.qtable")
         print(f"Ryu wins: {self.ryu_wins}, Ken wins: {self.ken_wins}")
         plt.legend()
-        plt.show()
+        plt.savefig(f"graphs/l_{self.learning_rate}_d_{self.discount_factor}_n_{self.noise}.png")
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.Q:
             self.end_game()
 
-
-def run_game(learning_rate, discount_factor, noise):
-    print(f'noise: {noise}, learning_rate: {learning_rate}, discount_factor: {discount_factor}')
-    window = Graphic(learning_rate=learning_rate,
-                     discount_factor=discount_factor,
-                     noise=noise)
+if __name__ == '__main__':
+    window = Graphic(learning_rate=float(sys.argv[1]),
+                     discount_factor=float(sys.argv[2]),
+                     noise=float(sys.argv[3]))
     window.set_update_rate(1 / 999999999)
     window.setup()
     window.run()
-
-
-if __name__ == '__main__':
-    for noise in range(NOISES[0], NOISES[1] + 10, 10):
-        for learning_rate in range(LEARNING_RATES[0], LEARNING_RATES[1] + 10, 10):
-            for discount_factor in range(DISCOUNT_FACTORS[0], DISCOUNT_FACTORS[1] + 10, 10):
-                run_game(learning_rate / 100, discount_factor / 100, noise / 100)
