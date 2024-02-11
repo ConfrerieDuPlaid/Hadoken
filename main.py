@@ -459,7 +459,6 @@ def run_game(learning_rate, discount_factor, noise):
 
 if __name__ == '__main__':
     for noise in range(NOISES[0], NOISES[1] + 10, 10):
-        NOISE = noise / 100
         for learning_rate in range(LEARNING_RATES[0], LEARNING_RATES[1] + 10, 10):
             for discount_factor in range(DISCOUNT_FACTORS[0], DISCOUNT_FACTORS[1] + 10, 10):
                 run_game(learning_rate / 100, discount_factor / 100, noise / 100)
