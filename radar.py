@@ -21,14 +21,14 @@ MOVES = {
     ACTION_RIGHT: (1, ORIENTATION_RIGHT),
 }
 
-REWARD_WIN = 4096
-REWARD_LOSE = -2048
-REWARD_WALL = -128
-REWARD_HIT = 64
-REWARD_GET_HIT = -32
-REWARD_DODGE = 32
+REWARD_WIN = 100
+REWARD_LOSE = -200
+REWARD_WALL = -2
+REWARD_HIT = 10
+REWARD_GET_HIT = -20
+REWARD_DODGE = 12
 REWARD_MOVE = -1
-REWARD_NONE = -45
+REWARD_NONE = -1
 HIT_DAMAGE = 10
 
 DISTANCE_NONE, DISTANCE_NEAR, DISTANCE_MID, DISTANCE_FAR = '0', 'N', 'M', 'F'
@@ -244,7 +244,7 @@ class Environment:
                 reward -= REWARD_DODGE
 
         if action == ACTION_NONE:
-            reward -= REWARD_NONE
+            reward += REWARD_NONE
 
         if damage_inflicted:
             self.inflict_damage_to(self.opponent(player))
