@@ -92,7 +92,7 @@ class Environment:
     LEFT_WALL = 0
     RIGHT_WALL = GRID_LIMIT - 1
 
-    def __init__(self):
+    def __init__(self, learning_rate=0.5, discount_factor=0.5):
         self.positions = {
             RYU: RYU_START,
             KEN: KEN_START,
@@ -106,12 +106,12 @@ class Environment:
             KEN: STANCE_STANDING,
         }
         self.radars = {
-            RYU: self.get_radar(RYU),
-            KEN: self.get_radar(KEN),
+            RYU: tuple(['_'] * 12),
+            KEN: tuple(['_'] * 12),
         }
         self.agents = {
-            RYU: {},
-            KEN: {},
+            RYU: Agent(self, RYU, learning_rate, discount_factor),
+            KEN: Agent(self, KEN, learning_rate, discount_factor),
         }
 
     def reset(self):
@@ -143,7 +143,7 @@ class Environment:
         return KEN
 
     def get_radar(self, player):
-        radar = ['_'] * 9
+        radar = ['_'] * 12
         radar[7] = self.orientations[player]
         radar[8] = self.stances[player]
         opponent = self.opponent(player)
@@ -155,6 +155,8 @@ class Environment:
         radar[3 - DISTANCES[range_left_wall]] = WALL
         radar[3 + DISTANCES[range_right_wall]] = WALL
         radar[3 + orientation_to_opponent * DISTANCES[distance_opponent]] = self.stances[opponent]
+        for i in range(3):
+            radar[9 + i] = self.opponent_previous_actions(player)[i]
         return tuple(radar)
 
     def distance_between_players(self):
@@ -201,7 +203,7 @@ class Environment:
         if action in STANCE_CHANGES:
             was_within_range = self.is_within_range(opponent, last_opponent_action)
             self.stances[player] = STANCE_CHANGES[action]
-            reward = REWARD_MOVE
+            reward += REWARD_MOVE
             is_within_range = self.is_within_range(player, last_opponent_action)
             if was_within_range and is_within_range:
                 reward += REWARD_DODGE
@@ -230,6 +232,12 @@ class Environment:
 
         return reward, self.get_radar(player)
 
+    def opponent_previous_actions(self, player):
+        opponent = self.opponent(player)
+        if self.agents[opponent] == {}:
+            return [ACTION_NONE] * 3
+        return self.agents[opponent].previous_actions
+
     def inflict_damage_to(self, opponent):
         self.agents[opponent].get_hit()
 
@@ -257,8 +265,7 @@ class Agent:
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.env = environment
-        self.state = (
-        environment.radars[player_name], environment.orientations[player_name], environment.stances[player_name])
+        self.state = environment.radars[player_name]
         self.stance = STANCE_STANDING
         self.previous_state = self.state
         self.previous_actions = [ACTION_NONE, ACTION_NONE, ACTION_NONE]
@@ -371,15 +378,15 @@ class NonGraphic:
         self.exit_game = False
 
     def setup(self):
-        self.env = Environment()
+        self.env = Environment(self.learning_rate, self.discount_factor)
 
-        self.Ken = Agent(self.env, KEN, learning_rate=self.learning_rate, discount_factor=self.discount_factor)
-        # self.Ken.load_qtable("KenQtable.qtable")
+        self.Ken = self.env.agents[KEN]
+        self.Ken.set_position()
+        self.Ken.load_qtable("KenQtable.qtable")
 
-        self.Ryu = Agent(self.env, RYU, learning_rate=self.learning_rate, discount_factor=self.discount_factor)
-        # self.Ryu.load_qtable("RyuQtable.qtable")
-
-        self.env.set_agents(self.Ryu, self.Ken)
+        self.Ryu = self.env.agents[RYU]
+        self.Ryu.set_position()
+        self.Ryu.load_qtable("RyuQtable.qtable")
 
     def run(self):
         while self.wins < self.max_wins and not self.exit_game:
