@@ -11,7 +11,8 @@ PLAYERS = [RYU, KEN]
 
 ACTION_LEFT, ACTION_RIGHT, ACTION_JUMP, ACTION_CROUCH, ACTION_DODGE, ACTION_NONE = 'L', 'R', 'J', 'C', 'D', 'N'
 ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK = 'P', 'LK', 'HK'
-ACTIONS = [ACTION_LEFT, ACTION_RIGHT, ACTION_JUMP, ACTION_CROUCH, ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_DODGE, ACTION_NONE]
+ACTIONS = [ACTION_LEFT, ACTION_RIGHT, ACTION_JUMP, ACTION_CROUCH, ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK,
+           ACTION_DODGE, ACTION_NONE]
 ATTACKS = [ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK]  # todo add jump and crouch to actions
 
 ORIENTATION_LEFT, ORIENTATION_RIGHT = -1, 1
@@ -22,7 +23,7 @@ MOVES = {
 }
 
 REWARD_WIN = 1000
-REWARD_LOSE = -200
+REWARD_LOSE = -2000
 REWARD_WALL = -2
 REWARD_HIT = 30
 REWARD_GET_HIT = -40
@@ -279,7 +280,8 @@ class Agent(arcade.Sprite):
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.env = environment
-        self.state = (environment.radars[player_name], environment.orientations[player_name], environment.stances[player_name])
+        self.state = (
+            environment.radars[player_name], environment.orientations[player_name], environment.stances[player_name])
         self.stance = STANCE_STANDING
         self.previous_state = self.state
         self.previous_actions = [ACTION_NONE, ACTION_NONE, ACTION_NONE]
@@ -398,7 +400,7 @@ class Graphic(arcade.Window):
     def __init__(self):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         self.player_list = None
-        self.max_wins = 10000
+        self.max_wins = 10
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
@@ -448,6 +450,9 @@ class Graphic(arcade.Window):
         self.clear()
         self.wall_list.draw()
         self.player_list.draw()
+        arcade.draw_text(
+            f'Iterations : {self.iterations} Ryu Score: {self.Ryu.get_score()} Ken Score: {self.Ken.get_score()} Total wins : {self.ryu_wins + self.ken_wins}',
+            10, 10, arcade.color.RED, 24, bold=True)
 
     def on_update(self, delta_time: float):
         player_start = choice(PLAYERS)
@@ -507,6 +512,6 @@ class Graphic(arcade.Window):
 
 if __name__ == '__main__':
     window = Graphic()
-    window.set_update_rate(1 / 999999999)
+    window.set_update_rate(1 / 60)
     window.setup()
     window.run()
