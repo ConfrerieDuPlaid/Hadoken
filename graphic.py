@@ -21,14 +21,14 @@ MOVES = {
     ACTION_RIGHT: (1, ORIENTATION_RIGHT),
 }
 
-REWARD_WIN = 100
+REWARD_WIN = 1000
 REWARD_LOSE = -200
 REWARD_WALL = -2
-REWARD_HIT = 10
-REWARD_GET_HIT = -20
+REWARD_HIT = 30
+REWARD_GET_HIT = -40
 REWARD_DODGE = 12
-REWARD_MOVE = -1
-REWARD_NONE = -1
+REWARD_MOVE = -5
+REWARD_NONE = -5
 HIT_DAMAGE = 10
 
 DISTANCE_NONE, DISTANCE_NEAR, DISTANCE_MID, DISTANCE_FAR = '0', 'N', 'M', 'F'
@@ -195,9 +195,11 @@ class Environment:
         opponent_stance = self.stances[self.opponent(attacker)]
         if attack not in STANCE_HIT_MAP[player_stance][opponent_stance]:
             return False
+        if self.positions[attacker] == self.positions[self.opponent(attacker)]:
+            return True
         radar = self.get_radar(attacker)
         target = radar[3 + self.orientations[attacker]]
-        return target != WALL and target != '_'  # todo not = self
+        return target != WALL and target != '_'
 
     def reset_player_stance(self, player):
         if self.stances == STANCE_STANDING:
@@ -270,7 +272,7 @@ class Environment:
 
 
 class Agent(arcade.Sprite):
-    def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.50, discount_factor=0.70):
+    def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.60, discount_factor=0.80):
         super().__init__()
         self.cur_texture = 0
         self.orientation = environment.orientations[player_name]
@@ -291,6 +293,7 @@ class Agent(arcade.Sprite):
         self.animations = []
         self.load_textures(player_name)
         self.textures = self.animations
+        self.noise = 1
 
     def load_textures(self, player_name):
         textures_path = f"./tiles/{player_name}/{player_name}"
@@ -327,7 +330,8 @@ class Agent(arcade.Sprite):
         self.score = 0
 
     def choose_action(self):
-        if random() < 0.4:
+        if random() < self.noise:
+            self.noise *= 0.9999
             self.current_action = choice(ACTIONS)
             return
         self.add_qtable_state(self.state)
@@ -394,7 +398,7 @@ class Graphic(arcade.Window):
     def __init__(self):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         self.player_list = None
-        self.max_wins = 100
+        self.max_wins = 10000
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
@@ -473,7 +477,8 @@ class Graphic(arcade.Window):
             self.Ryu.reset()
             self.Ken.reset()
             self.wins += 1
-            # print(self.ken_wins + self.ryu_wins)
+
+            print(self.ken_wins + self.ryu_wins)
         if self.wins >= self.max_wins:
             self.end_game()
             exit(0)
@@ -495,6 +500,9 @@ class Graphic(arcade.Window):
     def on_key_press(self, key, modifiers):
         if key == arcade.key.Q:
             self.end_game()
+        if key == arcade.key.R:
+            self.Ryu.noise = 1
+            self.Ken.noise = 1
 
 
 if __name__ == '__main__':

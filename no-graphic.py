@@ -21,8 +21,8 @@ MOVES = {
     ACTION_RIGHT: (1, ORIENTATION_RIGHT),
 }
 
-REWARD_WIN = 100
-REWARD_LOSE = -200
+REWARD_WIN = 1000
+REWARD_LOSE = -2000
 REWARD_WALL = -2
 REWARD_HIT = 10
 REWARD_GET_HIT = -20
@@ -249,10 +249,10 @@ class Environment:
 
 
 class Agent:
-    def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.50, discount_factor=0.70, noise = 0.4):
+    def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.50, discount_factor=0.70):
         super().__init__()
         self.cur_texture = 0
-        self.noise = noise
+        self.noise = 1
         self.orientation = environment.orientations[player_name]
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
@@ -287,6 +287,7 @@ class Agent:
 
     def choose_action(self):
         if random() < self.noise:
+            self.noise *= 0.999
             self.current_action = choice(ACTIONS)
             return
         self.add_qtable_state(self.state)
@@ -349,9 +350,9 @@ class Agent:
 
 
 class NonGraphic:
-    def __init__(self, learning_rate=0.5, discount_factor=0.5, noise=0.5):
+    def __init__(self, learning_rate=0.5, discount_factor=0.5):
         self.player_list = None
-        self.max_wins = 500
+        self.max_wins = 2000
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
@@ -367,18 +368,15 @@ class NonGraphic:
         self.wall_list = None
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
-        self.noise = noise
         self.exit_game = False
 
     def setup(self):
         self.env = Environment()
 
-        self.Ken = Agent(self.env, KEN, learning_rate=self.learning_rate, discount_factor=self.discount_factor,
-                         noise=self.noise)
+        self.Ken = Agent(self.env, KEN, learning_rate=self.learning_rate, discount_factor=self.discount_factor)
         # self.Ken.load_qtable("KenQtable.qtable")
 
-        self.Ryu = Agent(self.env, RYU, learning_rate=self.learning_rate, discount_factor=self.discount_factor,
-                         noise=self.noise)
+        self.Ryu = Agent(self.env, RYU, learning_rate=self.learning_rate, discount_factor=self.discount_factor)
         # self.Ryu.load_qtable("RyuQtable.qtable")
 
         self.env.set_agents(self.Ryu, self.Ken)
@@ -427,15 +425,14 @@ class NonGraphic:
         # self.Ryu.save("RyuQtable.qtable")
         # self.Ken.save("KenQtable.qtable")
         # print(f"Ryu wins: {self.ryu_wins}, Ken wins: {self.ken_wins}")
-        if self.wins > 100:
-            plt.legend()
-            plt.savefig(f"graphs/{self.wins}_{self.learning_rate}_d_{self.discount_factor}_n_{self.noise}.png")
-            self.exit_game = True
+
+        plt.legend()
+        plt.savefig(f"graphs/{self.wins}_{self.learning_rate}_d_{self.discount_factor}.png")
+        self.exit_game = True
 
 
 if __name__ == '__main__':
     window = NonGraphic(learning_rate=float(sys.argv[1]) / 100.0,
-                     discount_factor=float(sys.argv[2]) / 100.0,
-                     noise=float(sys.argv[3]) / 100.0)
+                     discount_factor=float(sys.argv[2]) / 100.0)
     window.setup()
     window.run()
