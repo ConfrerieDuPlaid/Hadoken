@@ -45,18 +45,16 @@ class NonGraphic(Game):
     def run(self):
         while self.wins < self.max_wins and not self.exit_game:
             self.round()
-            print(self.Ryu.get_score(), self.Ken.get_score())
             self.check_end_game()
             if self.Ken.get_score() < -35000 or self.Ryu.get_score() < -35000:
                 self.end_game()
-                # exit(0)
+                exit(0)
             if self.wins >= self.max_wins:
                 self.end_game()
-                # exit(0)
+                exit(0)
 
 
 if __name__ == '__main__':
-    window = NonGraphic(learning_rate=float(sys.argv[1]) / 100.0,
-                     discount_factor=float(sys.argv[2]) / 100.0)
+    window = NonGraphic()
     window.setup()
     window.run()
