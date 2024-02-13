@@ -33,8 +33,8 @@ class Environment(LogicEnvironment):
     def __init__(self, learning_rate=0.60, discount_factor=0.80):
         super().__init__(learning_rate, discount_factor)
         self.agents = {
-            KEN: Agent(self, KEN, 1, learning_rate, discount_factor),
-            RYU: Agent(self, RYU, -1, learning_rate, discount_factor)
+            KEN: Agent(self, KEN, learning_rate, discount_factor),
+            RYU: Agent(self, RYU, learning_rate, discount_factor)
         }
 
 
