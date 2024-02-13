@@ -10,9 +10,10 @@ KEN = "Ken"
 PLAYERS = [RYU, KEN]
 
 ACTION_LEFT, ACTION_RIGHT, ACTION_JUMP, ACTION_CROUCH, ACTION_DODGE, ACTION_NONE = 'L', 'R', 'J', 'C', 'D', 'N'
-ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK = 'P', 'LK', 'HK'
-ACTIONS = [ACTION_LEFT, ACTION_RIGHT, ACTION_JUMP, ACTION_CROUCH, ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_DODGE, ACTION_NONE]
-ATTACKS = [ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK]
+ACTION_PUNCH, ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK = 'P', 'HP', 'LP', 'LK', 'HK'
+ACTIONS = [ACTION_LEFT, ACTION_RIGHT, ACTION_JUMP, ACTION_CROUCH, ACTION_PUNCH, ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH,
+           ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_DODGE, ACTION_NONE]
+ATTACKS = [ACTION_PUNCH, ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK]
 
 ORIENTATION_LEFT, ORIENTATION_RIGHT = -1, 1
 ORIENTATIONS = [ORIENTATION_RIGHT, ORIENTATION_LEFT]
@@ -41,18 +42,18 @@ STANCES = [STANCE_STANDING, STANCE_CROUCHING, STANCE_JUMPING]
 STANCE_HIT_MAP = {
     STANCE_JUMPING: {
         STANCE_JUMPING: [ACTION_PUNCH],
-        STANCE_STANDING: [ACTION_LOW_KICK],
+        STANCE_STANDING: [ACTION_LOW_KICK, ACTION_LOW_PUNCH],
         STANCE_CROUCHING: [],
     },
     STANCE_STANDING: {
-        STANCE_JUMPING: [ACTION_HIGH_KICK],
-        STANCE_STANDING: [ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK],
-        STANCE_CROUCHING: [ACTION_LOW_KICK],
+        STANCE_JUMPING: [ACTION_HIGH_KICK, ACTION_HIGH_PUNCH],
+        STANCE_STANDING: [ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH],
+        STANCE_CROUCHING: [ACTION_LOW_KICK, ACTION_LOW_PUNCH],
     },
     STANCE_CROUCHING: {
         STANCE_JUMPING: [],
-        STANCE_STANDING: [ACTION_HIGH_KICK, ACTION_PUNCH],
-        STANCE_CROUCHING: [ACTION_PUNCH, ACTION_LOW_KICK],
+        STANCE_STANDING: [ACTION_HIGH_KICK, ACTION_HIGH_PUNCH],
+        STANCE_CROUCHING: [ACTION_PUNCH],
     },
 }
 STANCE_CHANGES = {
@@ -147,7 +148,7 @@ class LogicEnvironment:
         orientation_to_opponent = sign(self.positions[opponent] - player_position)
         range_left_wall = distance_to_range(player_position)
         range_right_wall = distance_to_range(self.RIGHT_WALL - player_position)
-        radar[3 - DISTANCES[range_left_wall]] = WALL #todo refacto ?
+        radar[3 - DISTANCES[range_left_wall]] = WALL  # todo refacto ?
         radar[3 + DISTANCES[range_right_wall]] = WALL
         radar[3 + orientation_to_opponent * DISTANCES[distance_opponent]] = self.stances[opponent]
         for i in range(3):
@@ -193,24 +194,14 @@ class LogicEnvironment:
 
         self.reset_player_stance(player)
         if action in MOVES:
-            was_within_range = self.is_within_range(opponent, last_opponent_action)
             reward += self.player_move(player, action)
-            # if was_within_range:
-            #     reward += REWARD_DODGE
 
         if action in STANCE_CHANGES:
-            # was_within_range = self.is_within_range(opponent, last_opponent_action)
             self.stances[player] = STANCE_CHANGES[action]
             reward += REWARD_MOVE
-            # is_within_range = self.is_within_range(player, last_opponent_action)
-            # if was_within_range and is_within_range:
-            #     reward += REWARD_DODGE
 
         if action in ATTACKS:
             if self.is_within_range(player, action):
-                # if last_opponent_action == ACTION_DODGE:
-                #     reward -= REWARD_HIT
-                # else:
                 reward += REWARD_HIT
                 damage_inflicted = True
             else:
@@ -332,7 +323,7 @@ class LogicAgent:
 class Game:
     def __init__(self, learning_rate=0.8, discount_factor=0.8):
         self.player_list = None
-        self.max_wins = 10_000_000
+        self.max_wins = 100
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
@@ -395,4 +386,3 @@ class Game:
         plt.legend()
         plt.savefig(f"graphs/{self.wins}_{self.learning_rate}_d_{self.discount_factor}.png")
         self.exit_game = True
-

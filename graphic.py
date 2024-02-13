@@ -1,8 +1,3 @@
-import pickle
-from os.path import exists
-
-from matplotlib import pyplot as plt
-from random import random, choice
 import arcade
 from logic import *
 
@@ -21,9 +16,11 @@ ANIMATIONS = {
     ACTION_DODGE: "dodge",
     ACTION_JUMP: "jump",
     ACTION_CROUCH: "crouch",
+    ACTION_PUNCH: "punch",
+    ACTION_HIGH_PUNCH: "low_punch",
+    ACTION_LOW_PUNCH: "high_punch",
     ACTION_HIGH_KICK: "high_kick",
     ACTION_LOW_KICK: "low_kick",
-    ACTION_PUNCH: "punch",
 }
 
 ANIMATIONS_LIST = list(ANIMATIONS.keys())
@@ -63,11 +60,11 @@ class Agent(arcade.Sprite, LogicAgent):
 
     def set_position(self, center_x: float = 64, center_y: float = 192):
         self.center_x = self.env.positions[self.player_name] * SPRITE_SIZE + SPRITE_SIZE / 2
-        self.center_y = SPRITE_SIZE + SPRITE_SIZE
+        self.center_y = SPRITE_SIZE + SPRITE_SIZE / 2
         if self.current_action not in ANIMATIONS_LIST:
-            self.set_texture(ANIMATIONS_LIST.index(ACTION_NONE))
+            self.set_texture(self.animation_index(ACTION_NONE))
         else:
-            self.set_texture(ANIMATIONS_LIST.index(self.current_action))
+            self.set_texture(self.animation_index(self.current_action))
 
 
 class Graphic(arcade.Window, Game):
