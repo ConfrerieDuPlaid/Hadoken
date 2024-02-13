@@ -89,7 +89,7 @@ class LogicEnvironment:
     LEFT_WALL = 0
     RIGHT_WALL = GRID_LIMIT - 1
 
-    def __init__(self, learning_rate=0.5, discount_factor=0.5):
+    def __init__(self, learning_rate=1, discount_factor=1):
         self.positions = {
             RYU: RYU_START,
             KEN: KEN_START,
@@ -330,9 +330,9 @@ class LogicAgent:
 
 
 class Game:
-    def __init__(self, learning_rate=0.5, discount_factor=0.5):
+    def __init__(self, learning_rate=1, discount_factor=1):
         self.player_list = None
-        self.max_wins = 10000
+        self.max_wins = 100
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
@@ -357,17 +357,6 @@ class Game:
         self.Ryu = self.env.agents[RYU]
         self.Ryu.set_position()
         self.Ryu.load_qtable("RyuQtable.qtable")
-
-    def run(self):
-        while self.wins < self.max_wins and not self.exit_game:
-            self.round()
-            self.check_end_game()
-            if self.Ken.get_score() < -65000 or self.Ryu.get_score() < -65000:
-                self.end_game()
-                exit(0)
-            if self.wins >= self.max_wins:
-                self.end_game()
-                exit(0)
 
     def check_end_game(self):
         if self.Ryu.is_dead() or self.Ken.is_dead():

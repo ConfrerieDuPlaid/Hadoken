@@ -2,7 +2,7 @@ from logic import *
 
 
 class Environment(LogicEnvironment):
-    def __init__(self, learning_rate=0.5, discount_factor=0.5):
+    def __init__(self, learning_rate=1, discount_factor=1):
         super().__init__(learning_rate, discount_factor)
         self.agents = {
             RYU: Agent(self, RYU, learning_rate, discount_factor),
@@ -25,12 +25,12 @@ class Environment(LogicEnvironment):
 
 
 class Agent(LogicAgent):
-    def __init__(self, environment, player_name, learning_rate=0.50, discount_factor=0.70):
+    def __init__(self, environment, player_name, learning_rate=1, discount_factor=1):
         super().__init__(environment, player_name, learning_rate, discount_factor)
 
 
 class NonGraphic(Game):
-    def __init__(self, learning_rate=0.5, discount_factor=0.5):
+    def __init__(self, learning_rate=1, discount_factor=1):
         super().__init__(learning_rate, discount_factor)
 
     def setup(self):
@@ -41,6 +41,18 @@ class NonGraphic(Game):
 
         self.Ryu = self.env.agents[RYU]
         # self.Ryu.load_qtable("RyuQtable.qtable")
+
+    def run(self):
+        while self.wins < self.max_wins and not self.exit_game:
+            self.round()
+            print(self.Ryu.get_score(), self.Ken.get_score())
+            self.check_end_game()
+            if self.Ken.get_score() < -35000 or self.Ryu.get_score() < -35000:
+                self.end_game()
+                # exit(0)
+            if self.wins >= self.max_wins:
+                self.end_game()
+                # exit(0)
 
 
 if __name__ == '__main__':

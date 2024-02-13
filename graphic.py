@@ -71,7 +71,7 @@ class Agent(arcade.Sprite, LogicAgent):
 
 
 class Graphic(arcade.Window, Game):
-    def __init__(self, learning_rate=0.5, discount_factor=0.5):
+    def __init__(self, learning_rate=1, discount_factor=1):
         arcade.Window.__init__(self, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         Game.__init__(self, learning_rate, discount_factor)
         self.gui_camera = None
