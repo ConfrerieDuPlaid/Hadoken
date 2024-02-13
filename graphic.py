@@ -30,7 +30,7 @@ ANIMATIONS_LIST = list(ANIMATIONS.keys())
 
 
 class Environment(LogicEnvironment):
-    def __init__(self, learning_rate=0.60, discount_factor=0.80):
+    def __init__(self, learning_rate=0.80, discount_factor=0.80):
         super().__init__(learning_rate, discount_factor)
         self.agents = {
             KEN: Agent(self, KEN, learning_rate, discount_factor),
@@ -39,7 +39,7 @@ class Environment(LogicEnvironment):
 
 
 class Agent(arcade.Sprite, LogicAgent):
-    def __init__(self, environment, player_name, learning_rate=0.60, discount_factor=0.80):
+    def __init__(self, environment, player_name, learning_rate=0.80, discount_factor=0.80):
         arcade.Sprite.__init__(self)
         LogicAgent.__init__(self, environment, player_name, learning_rate, discount_factor)
         self.cur_texture = 0
@@ -71,7 +71,7 @@ class Agent(arcade.Sprite, LogicAgent):
 
 
 class Graphic(arcade.Window, Game):
-    def __init__(self, learning_rate=1, discount_factor=1):
+    def __init__(self, learning_rate=0.80, discount_factor=0.80):
         arcade.Window.__init__(self, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         Game.__init__(self, learning_rate, discount_factor)
         self.gui_camera = None

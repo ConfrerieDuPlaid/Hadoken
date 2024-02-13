@@ -21,7 +21,7 @@ MOVES = {
     ACTION_RIGHT: (1, ORIENTATION_RIGHT),
 }
 
-REWARD_WIN = 1000
+REWARD_WIN = 150
 REWARD_WALL = -2
 REWARD_HIT = 10
 REWARD_MOVE = -2
@@ -89,7 +89,7 @@ class LogicEnvironment:
     LEFT_WALL = 0
     RIGHT_WALL = GRID_LIMIT - 1
 
-    def __init__(self, learning_rate=1, discount_factor=1):
+    def __init__(self, learning_rate=0.8, discount_factor=0.8):
         self.positions = {
             RYU: RYU_START,
             KEN: KEN_START,
@@ -214,13 +214,13 @@ class LogicEnvironment:
                 reward += REWARD_HIT
                 damage_inflicted = True
             else:
-                reward -= REWARD_NONE
+                reward += REWARD_NONE
 
-        # if action == ACTION_DODGE:
-        #     if last_opponent_action in ATTACKS and self.is_within_range(opponent, last_opponent_action):
-        #         reward += REWARD_DODGE
-        #     else:
-        #         reward -= REWARD_DODGE
+        if action == ACTION_DODGE:
+            if last_opponent_action in ATTACKS and self.is_within_range(opponent, last_opponent_action):
+                reward -= REWARD_NONE
+            else:
+                reward += REWARD_NONE
 
         if action == ACTION_NONE:
             reward += REWARD_NONE
@@ -330,9 +330,9 @@ class LogicAgent:
 
 
 class Game:
-    def __init__(self, learning_rate=1, discount_factor=1):
+    def __init__(self, learning_rate=0.8, discount_factor=0.8):
         self.player_list = None
-        self.max_wins = 100
+        self.max_wins = 10_000
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
@@ -388,8 +388,8 @@ class Game:
         self.env.reset()
         plt.plot(self.ryu_score, label="Ryu")
         plt.plot(self.ken_score, label="Ken")
-        # self.Ryu.save("RyuQtable.qtable")
-        # self.Ken.save("KenQtable.qtable")
+        self.Ryu.save("RyuQtable.qtable")
+        self.Ken.save("KenQtable.qtable")
         print(f"Ryu wins: {self.ryu_wins}, Ken wins: {self.ken_wins}")
 
         plt.legend()
