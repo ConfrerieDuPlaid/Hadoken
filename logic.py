@@ -8,7 +8,7 @@ from random import random, choice
 LEARNING_RATE = 0.6
 DISCOUNT_FACTOR = 0.25
 NOISE = 0.2
-MAX_WIN = 1_000
+MAX_WIN = 5_000
 
 RYU = "Ryu"
 KEN = "Ken"
@@ -348,11 +348,11 @@ class Game:
 
         self.Ken = self.env.agents[KEN]
         self.Ken.set_position()
-        self.Ken.load_qtable("KenQtable.qtable")
+        # self.Ken.load_qtable("KenQtable.qtable")
 
         self.Ryu = self.env.agents[RYU]
         self.Ryu.set_position()
-        self.Ryu.load_qtable("RyuQtable.qtable")
+#         self.Ryu.load_qtable("RyuQtable.qtable")
 
     def check_end_game(self):
         if self.Ryu.is_dead() or self.Ken.is_dead():
