@@ -21,11 +21,11 @@ MOVES = {
     ACTION_RIGHT: (1, ORIENTATION_RIGHT),
 }
 
-REWARD_WIN = 150
+REWARD_WIN = 50
 REWARD_WALL = -2
-REWARD_HIT = 10
-REWARD_MOVE = -2
-REWARD_NONE = -2
+REWARD_HIT = 5
+REWARD_MOVE = -10
+REWARD_NONE = -1
 HIT_DAMAGE = 10
 
 DISTANCE_NONE, DISTANCE_NEAR, DISTANCE_MID, DISTANCE_FAR = '0', 'N', 'M', 'F'
@@ -273,10 +273,10 @@ class LogicAgent:
         self.score = 0
 
     def choose_action(self):
-        if random() < self.noise:
-            self.noise *= 0.999
-            self.current_action = choice(ACTIONS)
-            return
+        # if random() < self.noise:
+        #     self.noise *= 0.999
+        #     self.current_action = choice(ACTIONS)
+        #     return
         self.add_qtable_state(self.state)
         self.current_action = arg_max(self.qtable[self.state])
 
@@ -332,7 +332,7 @@ class LogicAgent:
 class Game:
     def __init__(self, learning_rate=0.8, discount_factor=0.8):
         self.player_list = None
-        self.max_wins = 10_000
+        self.max_wins = 10_000_000
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
