@@ -8,7 +8,7 @@ from random import random, choice
 LEARNING_RATE = 0.6
 DISCOUNT_FACTOR = 0.25
 NOISE = 0.2
-MAX_WIN = 10_000
+MAX_WIN = 1_000
 
 RYU = "Ryu"
 KEN = "Ken"
@@ -113,8 +113,8 @@ class LogicEnvironment:
             KEN: tuple(['_'] * 12),
         }
         self.agents = {
-            RYU: LogicAgent(self, RYU, LEARNING_RATE, DISCOUNT_FACTOR),
-            KEN: LogicAgent(self, KEN, LEARNING_RATE, DISCOUNT_FACTOR),
+            RYU: LogicAgent(self, RYU, learning_rate, discount_factor),
+            KEN: LogicAgent(self, KEN, learning_rate, discount_factor),
         }
 
     def reset(self):
@@ -240,8 +240,8 @@ class LogicAgent:
     def __init__(self, environment, player_name, learning_rate=1, discount_factor=1, noise=0):
         self.noise = 0
         self.orientation = environment.orientations[player_name]
-        self.learning_rate = LEARNING_RATE
-        self.discount_factor = DISCOUNT_FACTOR
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
         self.env = environment
         self.state = environment.radars[player_name]
         self.stance = STANCE_STANDING
@@ -249,7 +249,7 @@ class LogicAgent:
         self.previous_actions = [ACTION_NONE, ACTION_NONE, ACTION_NONE]
         self.current_action = ACTION_NONE
         self.player_name = player_name
-        self.health = 300
+        self.health = 100
         self.qtable = {}
         self.score = 0
 
@@ -265,7 +265,7 @@ class LogicAgent:
     def reset(self):
         self.orientation = self.env.orientations[self.player_name]
         self.state = self.env.radars[self.player_name]
-        self.health = 300
+        self.health = 100
         self.score = 0
 
     def choose_action(self):
@@ -286,8 +286,8 @@ class LogicAgent:
         self.add_qtable_state(prev_state)
         self.add_qtable_state(new_state)
         max_q = max(self.qtable[new_state].values())
-        self.qtable[prev_state][self.current_action] += LEARNING_RATE * (
-                reward + DISCOUNT_FACTOR * max_q - self.qtable[prev_state][self.current_action])
+        self.qtable[prev_state][self.current_action] += self.learning_rate * (
+                reward + self.discount_factor * max_q - self.qtable[prev_state][self.current_action])
 
     def do(self):
         self.choose_action()
@@ -339,8 +339,8 @@ class Game:
         self.Ken = None
         self.env = None
         self.wall_list = None
-        self.learning_rate = LEARNING_RATE
-        self.discount_factor = DISCOUNT_FACTOR
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
         self.exit_game = False
 
     def setup(self):
@@ -389,5 +389,5 @@ class Game:
         print(f"Ryu wins: {self.ryu_wins}, Ken wins: {self.ken_wins}")
 
         plt.legend()
-        plt.savefig(f"graphs/{self.wins}_{LEARNING_RATE}_d_{DISCOUNT_FACTOR}.png")
+        plt.savefig(f"graphs/{self.wins}_{self.learning_rate}_d_{self.discount_factor}.png")
         self.exit_game = True
