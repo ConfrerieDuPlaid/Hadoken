@@ -22,13 +22,10 @@ MOVES = {
 }
 
 REWARD_WIN = 1000
-REWARD_LOSE = -2000
 REWARD_WALL = -2
 REWARD_HIT = 10
-REWARD_GET_HIT = -20
-REWARD_DODGE = 12
-REWARD_MOVE = -1
-REWARD_NONE = -1
+REWARD_MOVE = -2
+REWARD_NONE = -2
 HIT_DAMAGE = 10
 
 DISTANCE_NONE, DISTANCE_NEAR, DISTANCE_MID, DISTANCE_FAR = '0', 'N', 'M', 'F'
@@ -335,7 +332,7 @@ class LogicAgent:
 class Game:
     def __init__(self, learning_rate=0.5, discount_factor=0.5):
         self.player_list = None
-        self.max_wins = 200
+        self.max_wins = 10000
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
@@ -365,7 +362,7 @@ class Game:
         while self.wins < self.max_wins and not self.exit_game:
             self.round()
             self.check_end_game()
-            if self.Ken.get_score() < -35000 or self.Ryu.get_score() < -35000:
+            if self.Ken.get_score() < -65000 or self.Ryu.get_score() < -65000:
                 self.end_game()
                 exit(0)
             if self.wins >= self.max_wins:
@@ -386,7 +383,7 @@ class Game:
             self.ryu_score.append(self.Ryu.get_score())
             self.env.reset()
             self.wins += 1
-            print(self.ken_wins + self.ryu_wins)
+            # print(self.ken_wins + self.ryu_wins)
 
     def round(self):
         player_start = choice(PLAYERS)
