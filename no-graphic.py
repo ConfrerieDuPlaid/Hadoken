@@ -1,8 +1,3 @@
-import pickle
-import sys
-from os.path import exists
-
-from matplotlib import pyplot as plt
 from logic import *
 
 
@@ -14,10 +9,24 @@ class Environment(LogicEnvironment):
             KEN: Agent(self, KEN, learning_rate, discount_factor),
         }
 
+    def print_map(self):
+        for i in range(GRID_LIMIT):
+            if i == self.LEFT_WALL or i == self.RIGHT_WALL:
+                print('|', end='')
+            elif self.positions[RYU] == i and self.positions[KEN] == i:
+                print('O', end='')
+            elif self.positions[RYU] == i:
+                print('R', end='')
+            elif self.positions[KEN] == i:
+                print('K', end='')
+            else:
+                print('_', end='')
+        print()
+
 
 class Agent(LogicAgent):
-    def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.50, discount_factor=0.70):
-        super().__init__(environment, player_name, default_orientation, learning_rate, discount_factor)
+    def __init__(self, environment, player_name, learning_rate=0.50, discount_factor=0.70):
+        super().__init__(environment, player_name, learning_rate, discount_factor)
 
 
 class NonGraphic(Game):

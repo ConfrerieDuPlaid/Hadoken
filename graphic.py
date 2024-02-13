@@ -39,9 +39,9 @@ class Environment(LogicEnvironment):
 
 
 class Agent(arcade.Sprite, LogicAgent):
-    def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.60, discount_factor=0.80):
+    def __init__(self, environment, player_name, learning_rate=0.60, discount_factor=0.80):
         arcade.Sprite.__init__(self)
-        LogicAgent.__init__(self, environment, player_name, default_orientation, learning_rate, discount_factor)
+        LogicAgent.__init__(self, environment, player_name, learning_rate, discount_factor)
         self.cur_texture = 0
         self.scale = CHARACTER_SCALING
         self.current_animation = 0

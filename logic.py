@@ -12,7 +12,7 @@ PLAYERS = [RYU, KEN]
 ACTION_LEFT, ACTION_RIGHT, ACTION_JUMP, ACTION_CROUCH, ACTION_DODGE, ACTION_NONE = 'L', 'R', 'J', 'C', 'D', 'N'
 ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK = 'P', 'LK', 'HK'
 ACTIONS = [ACTION_LEFT, ACTION_RIGHT, ACTION_JUMP, ACTION_CROUCH, ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_DODGE, ACTION_NONE]
-ATTACKS = [ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK]  # todo add jump and crouch to actions
+ATTACKS = [ACTION_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK]
 
 ORIENTATION_LEFT, ORIENTATION_RIGHT = -1, 1
 ORIENTATIONS = [ORIENTATION_RIGHT, ORIENTATION_LEFT]
@@ -147,10 +147,10 @@ class LogicEnvironment:
         opponent = self.opponent(player)
         player_position = self.positions[player]
         distance_opponent = self.distance_between_players()
-        orientation_to_opponent = -sign(player_position - self.positions[opponent])
+        orientation_to_opponent = sign(self.positions[opponent] - player_position)
         range_left_wall = distance_to_range(player_position)
         range_right_wall = distance_to_range(self.RIGHT_WALL - player_position)
-        radar[3 - DISTANCES[range_left_wall]] = WALL
+        radar[3 - DISTANCES[range_left_wall]] = WALL #todo refacto ?
         radar[3 + DISTANCES[range_right_wall]] = WALL
         radar[3 + orientation_to_opponent * DISTANCES[distance_opponent]] = self.stances[opponent]
         for i in range(3):
@@ -174,9 +174,11 @@ class LogicEnvironment:
         opponent_stance = self.stances[self.opponent(attacker)]
         if attack not in STANCE_HIT_MAP[player_stance][opponent_stance]:
             return False
+        if self.positions[attacker] == self.positions[self.opponent(attacker)]:
+            return True
         radar = self.get_radar(attacker)
         target = radar[3 + self.orientations[attacker]]
-        return target != WALL and target != '_'  # todo not = self
+        return target != WALL and target != '_'
 
     def reset_player_stance(self, player):
         if self.stances == STANCE_STANDING:
@@ -188,23 +190,24 @@ class LogicEnvironment:
     def do(self, player):
         reward = 0
         opponent = self.opponent(player)
-        last_opponent_action = self.agents[opponent].current_action
+        last_opponent_action = self.agents[opponent].previous_actions[0]
         damage_inflicted = False
-        self.reset_player_stance(player)
         action = self.agents[player].current_action
+
+        self.reset_player_stance(player)
         if action in MOVES:
             was_within_range = self.is_within_range(opponent, last_opponent_action)
             reward += self.player_move(player, action)
-            if was_within_range:
-                reward += REWARD_DODGE
+            # if was_within_range:
+            #     reward += REWARD_DODGE
 
         if action in STANCE_CHANGES:
-            was_within_range = self.is_within_range(opponent, last_opponent_action)
+            # was_within_range = self.is_within_range(opponent, last_opponent_action)
             self.stances[player] = STANCE_CHANGES[action]
             reward += REWARD_MOVE
-            is_within_range = self.is_within_range(player, last_opponent_action)
-            if was_within_range and is_within_range:
-                reward += REWARD_DODGE
+            # is_within_range = self.is_within_range(player, last_opponent_action)
+            # if was_within_range and is_within_range:
+            #     reward += REWARD_DODGE
 
         if action in ATTACKS:
             if self.is_within_range(player, action):
@@ -214,13 +217,13 @@ class LogicEnvironment:
                 reward += REWARD_HIT
                 damage_inflicted = True
             else:
-                reward -= REWARD_HIT
+                reward -= REWARD_NONE
 
-        if action == ACTION_DODGE:
-            if last_opponent_action in ATTACKS and self.is_within_range(opponent, last_opponent_action):
-                reward += REWARD_DODGE
-            else:
-                reward -= REWARD_DODGE
+        # if action == ACTION_DODGE:
+        #     if last_opponent_action in ATTACKS and self.is_within_range(opponent, last_opponent_action):
+        #         reward += REWARD_DODGE
+        #     else:
+        #         reward -= REWARD_DODGE
 
         if action == ACTION_NONE:
             reward += REWARD_NONE
@@ -239,24 +242,10 @@ class LogicEnvironment:
     def inflict_damage_to(self, opponent):
         self.agents[opponent].get_hit()
 
-    def print_map(self):
-        for i in range(GRID_LIMIT):
-            if i == self.LEFT_WALL or i == self.RIGHT_WALL:
-                print('|', end='')
-            elif self.positions[RYU] == i and self.positions[KEN] == i:
-                print('O', end='')
-            elif self.positions[RYU] == i:
-                print('R', end='')
-            elif self.positions[KEN] == i:
-                print('K', end='')
-            else:
-                print('_', end='')
-        print()
-
 
 class LogicAgent:
-    def __init__(self, environment, player_name, default_orientation=1, learning_rate=0.50, discount_factor=0.70):
-        self.noise = 1
+    def __init__(self, environment, player_name, learning_rate=1, discount_factor=1, noise=0):
+        self.noise = noise
         self.orientation = environment.orientations[player_name]
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
@@ -322,9 +311,6 @@ class LogicAgent:
         self.previous_actions.pop()
         self.previous_actions.insert(0, self.current_action)
 
-    def get_state(self):
-        return f"{self.previous_state} {self.qtable[self.previous_state]}"
-
     def get_hit(self):
         self.health -= HIT_DAMAGE
 
@@ -340,10 +326,6 @@ class LogicAgent:
     def win(self):
         self.score += REWARD_WIN
         self.update_qtable(REWARD_WIN, self.previous_state, self.state)
-
-    def lose(self):
-        self.score += REWARD_LOSE
-        self.update_qtable(REWARD_LOSE, self.previous_state, self.state)
 
     def save(self, filename):
         with open(filename, 'wb') as file:
@@ -393,13 +375,11 @@ class Game:
     def check_end_game(self):
         if self.Ryu.is_dead() or self.Ken.is_dead():
             if self.Ryu.is_dead():
-                self.Ryu.lose()
                 self.Ken.win()
                 self.ken_wins += 1
                 # self.display_victory(KEN)
             else:
                 self.Ryu.win()
-                self.Ken.lose()
                 self.ryu_wins += 1
                 # self.display_victory(RYU)
             self.ken_score.append(self.Ken.get_score())
