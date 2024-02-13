@@ -112,7 +112,15 @@ class Graphic(arcade.Window, Game):
         self.player_list.draw()
         arcade.draw_text(
             f'Iterations : {self.iterations} Ryu Score: {self.Ryu.get_score()} Ken Score: {self.Ken.get_score()} Total wins : {self.ryu_wins + self.ken_wins}',
-            10, 10, arcade.color.RED, 24, bold=True)
+            10, 10, arcade.color.RED, 20, bold=True)
+        arcade.draw_text(
+            f'Ryu hp : {self.Ryu.health} Key hp: {self.Ken.health}', 10, 40, arcade.color.RED, 20, bold=True)
+        arcade.draw_text(
+            f'Ryu noise : {self.Ryu.noise} Key noise: {self.Ken.noise}', 10, 60, arcade.color.RED, 20, bold=True)
+        arcade.draw_text(
+            f'Ryu state : {self.Ryu.state} ', 10, SCREEN_HEIGHT - 40, arcade.color.RED, 20, bold=True)
+        arcade.draw_text(
+            f'Ken state : {self.Ken.state} ', 10, SCREEN_HEIGHT - 80, arcade.color.RED, 20, bold=True)
 
     def on_update(self, delta_time: float):
         player_start = super().round()
