@@ -5,6 +5,11 @@ from os.path import exists
 from matplotlib import pyplot as plt
 from random import random, choice
 
+LEARNING_RATE = 0.6
+DISCOUNT_FACTOR = 0.25
+NOISE = 0.2
+MAX_WIN = 10_000
+
 RYU = "Ryu"
 KEN = "Ken"
 PLAYERS = [RYU, KEN]
@@ -25,8 +30,8 @@ MOVES = {
 REWARD_WIN = 50
 REWARD_WALL = -2
 REWARD_HIT = 5
-REWARD_MOVE = -10
-REWARD_NONE = -1
+REWARD_MOVE = -2
+REWARD_NONE = -2
 HIT_DAMAGE = 10
 
 DISTANCE_NONE, DISTANCE_NEAR, DISTANCE_MID, DISTANCE_FAR = '0', 'N', 'M', 'F'
@@ -90,7 +95,7 @@ class LogicEnvironment:
     LEFT_WALL = 0
     RIGHT_WALL = GRID_LIMIT - 1
 
-    def __init__(self, learning_rate=0.8, discount_factor=0.8):
+    def __init__(self, learning_rate=0.8, discount_factor=0.5):
         self.positions = {
             RYU: RYU_START,
             KEN: KEN_START,
@@ -108,8 +113,8 @@ class LogicEnvironment:
             KEN: tuple(['_'] * 12),
         }
         self.agents = {
-            RYU: LogicAgent(self, RYU, learning_rate, discount_factor),
-            KEN: LogicAgent(self, KEN, learning_rate, discount_factor),
+            RYU: LogicAgent(self, RYU, LEARNING_RATE, DISCOUNT_FACTOR),
+            KEN: LogicAgent(self, KEN, LEARNING_RATE, DISCOUNT_FACTOR),
         }
 
     def reset(self):
@@ -172,8 +177,8 @@ class LogicEnvironment:
         opponent_stance = self.stances[self.opponent(attacker)]
         if attack not in STANCE_HIT_MAP[player_stance][opponent_stance]:
             return False
-        if self.positions[attacker] == self.positions[self.opponent(attacker)]:
-            return True
+        # if self.positions[attacker] == self.positions[self.opponent(attacker)]:
+        #     return True
         radar = self.get_radar(attacker)
         target = radar[3 + self.orientations[attacker]]
         return target != WALL and target != '_'
@@ -211,7 +216,7 @@ class LogicEnvironment:
             if last_opponent_action in ATTACKS and self.is_within_range(opponent, last_opponent_action):
                 reward -= REWARD_NONE
             else:
-                reward += REWARD_NONE
+                reward += REWARD_NONE * 2
 
         if action == ACTION_NONE:
             reward += REWARD_NONE
@@ -233,10 +238,10 @@ class LogicEnvironment:
 
 class LogicAgent:
     def __init__(self, environment, player_name, learning_rate=1, discount_factor=1, noise=0):
-        self.noise = noise
+        self.noise = 0
         self.orientation = environment.orientations[player_name]
-        self.learning_rate = learning_rate
-        self.discount_factor = discount_factor
+        self.learning_rate = LEARNING_RATE
+        self.discount_factor = DISCOUNT_FACTOR
         self.env = environment
         self.state = environment.radars[player_name]
         self.stance = STANCE_STANDING
@@ -244,7 +249,7 @@ class LogicAgent:
         self.previous_actions = [ACTION_NONE, ACTION_NONE, ACTION_NONE]
         self.current_action = ACTION_NONE
         self.player_name = player_name
-        self.health = 100
+        self.health = 300
         self.qtable = {}
         self.score = 0
 
@@ -260,14 +265,14 @@ class LogicAgent:
     def reset(self):
         self.orientation = self.env.orientations[self.player_name]
         self.state = self.env.radars[self.player_name]
-        self.health = 100
+        self.health = 300
         self.score = 0
 
     def choose_action(self):
-        # if random() < self.noise:
-        #     self.noise *= 0.999
-        #     self.current_action = choice(ACTIONS)
-        #     return
+        if random() < self.noise:
+            self.noise *= 0.999
+            self.current_action = choice(ACTIONS)
+            return
         self.add_qtable_state(self.state)
         self.current_action = arg_max(self.qtable[self.state])
 
@@ -281,8 +286,8 @@ class LogicAgent:
         self.add_qtable_state(prev_state)
         self.add_qtable_state(new_state)
         max_q = max(self.qtable[new_state].values())
-        self.qtable[prev_state][self.current_action] += self.learning_rate * (
-                reward + self.discount_factor * max_q - self.qtable[prev_state][self.current_action])
+        self.qtable[prev_state][self.current_action] += LEARNING_RATE * (
+                reward + DISCOUNT_FACTOR * max_q - self.qtable[prev_state][self.current_action])
 
     def do(self):
         self.choose_action()
@@ -323,7 +328,7 @@ class LogicAgent:
 class Game:
     def __init__(self, learning_rate=0.8, discount_factor=0.8):
         self.player_list = None
-        self.max_wins = 100
+        self.max_wins = MAX_WIN
         self.ryu_wins = 0
         self.ken_wins = 0
         self.wins = 0
@@ -334,8 +339,8 @@ class Game:
         self.Ken = None
         self.env = None
         self.wall_list = None
-        self.learning_rate = learning_rate
-        self.discount_factor = discount_factor
+        self.learning_rate = LEARNING_RATE
+        self.discount_factor = DISCOUNT_FACTOR
         self.exit_game = False
 
     def setup(self):
@@ -384,5 +389,5 @@ class Game:
         print(f"Ryu wins: {self.ryu_wins}, Ken wins: {self.ken_wins}")
 
         plt.legend()
-        plt.savefig(f"graphs/{self.wins}_{self.learning_rate}_d_{self.discount_factor}.png")
+        plt.savefig(f"graphs/{self.wins}_{LEARNING_RATE}_d_{DISCOUNT_FACTOR}.png")
         self.exit_game = True

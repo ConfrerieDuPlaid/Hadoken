@@ -133,8 +133,8 @@ class Graphic(arcade.Window, Game):
         if key == arcade.key.Q:
             self.end_game()
         if key == arcade.key.R:
-            self.Ryu.noise = 1
-            self.Ken.noise = 1
+            self.Ryu.noise = NOISE
+            self.Ken.noise = NOISE
 
 
 if __name__ == '__main__':
