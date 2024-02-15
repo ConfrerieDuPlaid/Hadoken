@@ -1,3 +1,5 @@
+import sys
+
 from logic import *
 
 
@@ -25,22 +27,24 @@ class Environment(LogicEnvironment):
 
 
 class Agent(LogicAgent):
-    def __init__(self, environment, player_name, learning_rate=1.0, discount_factor=1.0):
+    def __init__(self, environment, player_name, learning_rate, discount_factor):
         super().__init__(environment, player_name, learning_rate, discount_factor)
 
 
 class NonGraphic(Game):
-    def __init__(self, learning_rate=1.0, discount_factor=1.0):
+    def __init__(self, learning_rate=LEARNING_RATE, discount_factor=LEARNING_RATE):
         super().__init__(learning_rate, discount_factor)
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
 
     def setup(self):
-        self.env = Environment()
+        self.env = Environment(self.learning_rate, self.discount_factor)
 
         self.Ken = self.env.agents[KEN]
-        # self.Ken.load_qtable("KenQtable.qtable")
+        self.Ken.load_qtable("KenQtable.qtable")
 
         self.Ryu = self.env.agents[RYU]
-        # self.Ryu.load_qtable("RyuQtable.qtable")
+        self.Ryu.load_qtable("RyuQtable.qtable")
 
     def run(self):
         while self.wins < self.max_wins and not self.exit_game:
@@ -56,6 +60,6 @@ class NonGraphic(Game):
 
 if __name__ == '__main__':
     window = NonGraphic(learning_rate=float(sys.argv[1]) / 100.0,
-                     discount_factor=float(sys.argv[2]) / 100.0)
+                        discount_factor=float(sys.argv[2]) / 100.0)
     window.setup()
     window.run()

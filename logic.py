@@ -7,7 +7,7 @@ from random import random, choice
 LEARNING_RATE = 0.6
 DISCOUNT_FACTOR = 0.25
 NOISE = 0.2
-MAX_WIN = 5_000
+MAX_WIN = 10_000
 
 RYU = "Ryu"
 KEN = "Ken"
@@ -27,9 +27,10 @@ MOVES = {
     ACTION_RIGHT: (1, ORIENTATION_RIGHT),
 }
 
-REWARD_WIN = 100
+REWARD_WIN = 1000
+REWARD_COMBO = 500
 REWARD_WALL = -2
-REWARD_HIT = 10
+REWARD_HIT = 100
 REWARD_GET_HIT = -20
 REWARD_MOVE = -2
 REWARD_NONE = -2
@@ -96,7 +97,7 @@ class LogicEnvironment:
     LEFT_WALL = 0
     RIGHT_WALL = GRID_LIMIT - 1
 
-    def __init__(self, learning_rate=0.8, discount_factor=0.5):
+    def __init__(self, learning_rate, discount_factor):
         self.positions = {
             RYU: RYU_START,
             KEN: KEN_START,
@@ -110,8 +111,8 @@ class LogicEnvironment:
             KEN: STANCE_STANDING,
         }
         self.radars = {
-            RYU: tuple(['_'] * 12),
-            KEN: tuple(['_'] * 12),
+            RYU: tuple([]),
+            KEN: tuple([]),
         }
         self.agents = {
             RYU: LogicAgent(self, RYU, learning_rate, discount_factor),
@@ -145,7 +146,7 @@ class LogicEnvironment:
         return KEN
 
     def get_radar(self, player):
-        radar = ['_'] * 12
+        radar = ['_'] * 15
         radar[7] = self.orientations[player]
         radar[8] = self.stances[player]
         opponent = self.opponent(player)
@@ -159,6 +160,8 @@ class LogicEnvironment:
         radar[3 + orientation_to_opponent * DISTANCES[distance_opponent]] = self.stances[opponent]
         for i in range(3):
             radar[9 + i] = self.opponent_previous_actions(player)[i]
+        for i in range(3):
+            radar[12 + i] = self.agents[player].previous_actions[i]
         return tuple(radar)
 
     def distance_between_players(self):
@@ -168,6 +171,8 @@ class LogicEnvironment:
         radar = self.get_radar(player)
         move_delta, self.orientations[player] = MOVES[move]
         self.agents[player].orientation = self.orientations[player]
+        # if self.positions[player] + move_delta == self.LEFT_WALL or self.positions[player] + move_delta == self.RIGHT_WALL:
+        #     return REWARD_MOVE
         if radar[3 + move_delta] == WALL:
             return REWARD_WALL
         self.positions[player] += move_delta
@@ -209,6 +214,9 @@ class LogicEnvironment:
             if self.is_within_range(player, action):
                 reward += REWARD_HIT
                 self.inflict_damage_to(self.opponent(player))
+                previous_actions = self.agents[player].previous_actions
+                if previous_actions[0] in ATTACKS and previous_actions[1] in ATTACKS:
+                    reward += REWARD_COMBO
             else:
                 reward += REWARD_NONE
 
@@ -231,7 +239,7 @@ class LogicEnvironment:
 
 
 class LogicAgent:
-    def __init__(self, environment, player_name, learning_rate=1, discount_factor=1, noise=0):
+    def __init__(self, environment, player_name, learning_rate, discount_factor, noise=0):
         self.noise = noise
         self.orientation = environment.orientations[player_name]
         self.learning_rate = learning_rate
@@ -332,7 +340,7 @@ class LogicAgent:
 
 
 class Game:
-    def __init__(self, learning_rate=0.8, discount_factor=0.8):
+    def __init__(self, learning_rate=LEARNING_RATE, discount_factor=DISCOUNT_FACTOR):
         self.player_list = None
         self.max_wins = MAX_WIN
         self.ryu_wins = 0
@@ -354,24 +362,24 @@ class Game:
 
         self.Ken = self.env.agents[KEN]
         self.Ken.set_position()
-        # self.Ken.load_qtable("KenQtable.qtable")
+        self.Ken.load_qtable("KenQtable.qtable")
 
         self.Ryu = self.env.agents[RYU]
         self.Ryu.set_position()
-#         self.Ryu.load_qtable("RyuQtable.qtable")
+        self.Ryu.load_qtable("RyuQtable.qtable")
 
     def check_end_game(self):
         if self.Ryu.is_dead() or self.Ken.is_dead():
             if self.Ryu.is_dead():
                 self.Ken.win()
                 self.ken_wins += 1
+                self.ken_score.append(self.Ken.get_score())
                 # self.display_victory(KEN)
             else:
                 self.Ryu.win()
                 self.ryu_wins += 1
                 # self.display_victory(RYU)
-            self.ken_score.append(self.Ken.get_score())
-            self.ryu_score.append(self.Ryu.get_score())
+                self.ryu_score.append(self.Ryu.get_score())
             self.env.reset()
             self.wins += 1
             # print(self.ken_wins + self.ryu_wins)
