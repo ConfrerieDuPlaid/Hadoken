@@ -1,13 +1,17 @@
+import sys
+
 from logic import *
 
 
 class Environment(LogicEnvironment):
-    def __init__(self, learning_rate=1.0, discount_factor=1.0):
+    def __init__(self, learning_rate, discount_factor):
         super().__init__(learning_rate, discount_factor)
         self.agents = {
             RYU: Agent(self, RYU, learning_rate, discount_factor),
             KEN: Agent(self, KEN, learning_rate, discount_factor),
         }
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
 
     def print_map(self):
         for i in range(GRID_LIMIT):
@@ -25,16 +29,20 @@ class Environment(LogicEnvironment):
 
 
 class Agent(LogicAgent):
-    def __init__(self, environment, player_name, learning_rate=1.0, discount_factor=1.0):
+    def __init__(self, environment, player_name, learning_rate, discount_factor):
         super().__init__(environment, player_name, learning_rate, discount_factor)
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
 
 
 class NonGraphic(Game):
-    def __init__(self, learning_rate=1.0, discount_factor=1.0):
+    def __init__(self, learning_rate=LEARNING_RATE, discount_factor=DISCOUNT_FACTOR):
         super().__init__(learning_rate, discount_factor)
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
 
     def setup(self):
-        self.env = Environment()
+        self.env = Environment(self.learning_rate, self.discount_factor)
 
         self.Ken = self.env.agents[KEN]
         # self.Ken.load_qtable("KenQtable.qtable")

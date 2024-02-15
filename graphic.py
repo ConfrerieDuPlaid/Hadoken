@@ -6,8 +6,12 @@ SPRITE_SIZE = 128
 SPRITE_SCALE = 1
 CHARACTER_SCALING = 2
 
+WINDOW_VELOCITY_MAX = 999_999
+WINDOW_VELOCITY_MIN = 20
+
 SCREEN_WIDTH = SPRITE_SIZE * GRID_LIMIT
 SCREEN_HEIGHT = 650
+SCREEN_HEIGHT_SPACER = 40
 SCREEN_TITLE = "Hadoken - Street Fighter!"
 UPDATES_PER_FRAME = 5
 
@@ -27,18 +31,22 @@ ANIMATIONS_LIST = list(ANIMATIONS.keys())
 
 
 class Environment(LogicEnvironment):
-    def __init__(self, learning_rate=0.8, discount_factor=0.25):
+    def __init__(self, learning_rate, discount_factor):
         super().__init__(learning_rate, discount_factor)
         self.agents = {
             KEN: Agent(self, KEN, learning_rate, discount_factor),
             RYU: Agent(self, RYU, learning_rate, discount_factor)
         }
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
 
 
 class Agent(arcade.Sprite, LogicAgent):
-    def __init__(self, environment, player_name, learning_rate=0.8, discount_factor=0.25):
+    def __init__(self, environment, player_name, learning_rate, discount_factor):
         arcade.Sprite.__init__(self)
         LogicAgent.__init__(self, environment, player_name, learning_rate, discount_factor)
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
         self.cur_texture = 0
         self.scale = CHARACTER_SCALING
         self.current_animation = 0
@@ -68,9 +76,11 @@ class Agent(arcade.Sprite, LogicAgent):
 
 
 class Graphic(arcade.Window, Game):
-    def __init__(self, learning_rate=0.8, discount_factor=0.25):
+    def __init__(self, learning_rate=LEARNING_RATE, discount_factor=DISCOUNT_FACTOR):
         arcade.Window.__init__(self, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         Game.__init__(self, learning_rate, discount_factor)
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
         self.gui_camera = None
         self.camera = None
         self.scene = None
@@ -87,7 +97,7 @@ class Graphic(arcade.Window, Game):
             self.wall_list.append(wall)
 
     def setup(self):
-        self.env = Environment()
+        self.env = Environment(self.learning_rate, self.discount_factor)
 
         self.Ken = self.env.agents[KEN]
         self.Ken.set_position()
@@ -103,21 +113,58 @@ class Graphic(arcade.Window, Game):
 
         self.create_scene()
 
+    def win_rate(self, wins):
+        total_wins = self.ryu_wins + self.ken_wins
+        if total_wins == 0:
+            return 0
+        return round(100 * wins / total_wins, 2)
+
+    def draw_top_right_texts(self):
+        to_print = [
+            f'Ken win rate : {self.win_rate(self.ken_wins)} %',
+            f'Ryu win rate : {self.win_rate(self.ryu_wins)} %',
+            f'Iterations : {self.iterations}',
+            f'Total wins : {self.ryu_wins + self.ken_wins}'
+        ]
+        for i in range(len(to_print)):
+            arcade.draw_text(
+                to_print[i], SCREEN_WIDTH - 300, SCREEN_HEIGHT - SCREEN_HEIGHT_SPACER * (i+1), arcade.color.BLACK, 20, bold=True)
+
+    def print_ryu_vitals(self):
+        to_print = [
+            f'Ryu noise : {self.Ryu.noise}',
+            f'Ryu Score: {self.Ryu.get_score()}',
+            f'Ryu hp : {self.Ryu.health}',
+        ]
+        for i in range(len(to_print)):
+            arcade.draw_text(
+                to_print[i], SCREEN_WIDTH - 400, 10 + i * SCREEN_HEIGHT_SPACER, arcade.color.BLACK, 20, bold=True)
+
+    def print_ken_vitals(self):
+        to_print = [
+            f'Ken noise : {self.Ken.noise}',
+            f'Ken Score: {self.Ken.get_score()}',
+            f'Ken hp : {self.Ken.health}',
+        ]
+        for i in range(len(to_print)):
+            arcade.draw_text(
+                to_print[i], 10, 10 + i * SCREEN_HEIGHT_SPACER, arcade.color.BLACK, 20, bold=True)
+
+    def draw_texts(self):
+        self.draw_top_right_texts()
+        self.print_ryu_vitals()
+        self.print_ken_vitals()
+        arcade.draw_text(
+            f'Ryu state : {self.Ryu.state} ', 10, SCREEN_HEIGHT - SCREEN_HEIGHT_SPACER, arcade.color.BLACK, 20, bold=True)
+        arcade.draw_text(
+            f'Ken state : {self.Ken.state} ', 10, SCREEN_HEIGHT - 2 * SCREEN_HEIGHT_SPACER, arcade.color.BLACK, 20, bold=True)
+
+
     def on_draw(self):
         self.clear()
         self.wall_list.draw()
         self.player_list.draw()
-        arcade.draw_text(
-            f'Iterations : {self.iterations} Ryu Score: {self.Ryu.get_score()} Ken Score: {self.Ken.get_score()} Total wins : {self.ryu_wins + self.ken_wins}',
-            10, 10, arcade.color.BLACK, 20, bold=True)
-        arcade.draw_text(
-            f'Ryu hp : {self.Ryu.health} Key hp: {self.Ken.health}', 10, 40, arcade.color.BLACK, 20, bold=True)
-        arcade.draw_text(
-            f'Ryu noise : {self.Ryu.noise} Key noise: {self.Ken.noise}', 10, 60, arcade.color.BLACK, 20, bold=True)
-        arcade.draw_text(
-            f'Ryu state : {self.Ryu.state} ', 10, SCREEN_HEIGHT - 40, arcade.color.BLACK, 20, bold=True)
-        arcade.draw_text(
-            f'Ken state : {self.Ken.state} ', 10, SCREEN_HEIGHT - 80, arcade.color.BLACK, 20, bold=True)
+        self.draw_texts()
 
     def on_update(self, delta_time: float):
         player_start = super().round()
@@ -135,10 +182,14 @@ class Graphic(arcade.Window, Game):
         if key == arcade.key.R:
             self.Ryu.noise = NOISE
             self.Ken.noise = NOISE
+        if key == arcade.key.M:
+            window.set_update_rate(1 / WINDOW_VELOCITY_MIN)
+        if key == arcade.key.P:
+            window.set_update_rate(1 / WINDOW_VELOCITY_MAX)
 
 
 if __name__ == '__main__':
     window = Graphic()
-    window.set_update_rate(1 / 999999)
+    window.set_update_rate(1 / WINDOW_VELOCITY_MAX)
     window.setup()
     window.run()

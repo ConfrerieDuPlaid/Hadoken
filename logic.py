@@ -1,14 +1,13 @@
 import pickle
-import sys
 from os.path import exists
 
 from matplotlib import pyplot as plt
 from random import random, choice
 
-LEARNING_RATE = 0.6
-DISCOUNT_FACTOR = 0.25
-NOISE = 1
-MAX_WIN = 100000
+LEARNING_RATE = 0.8
+DISCOUNT_FACTOR = 0.8
+NOISE = 0.2
+MAX_WIN = 100_000
 
 RYU = "Ryu"
 KEN = "Ken"
@@ -16,9 +15,9 @@ PLAYERS = [RYU, KEN]
 
 ACTION_LEFT, ACTION_RIGHT, ACTION_JUMP, ACTION_CROUCH, ACTION_DODGE, ACTION_NONE = 'L', 'R', 'J', 'C', 'D', 'N'
 ACTION_PUNCH, ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK = 'P', 'HP', 'LP', 'LK', 'HK'
-ACTIONS = [ACTION_LEFT, ACTION_RIGHT, ACTION_JUMP, ACTION_CROUCH, ACTION_PUNCH,
+ACTIONS = [ACTION_NONE, ACTION_DODGE, ACTION_JUMP, ACTION_CROUCH, ACTION_PUNCH,
            # ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH,
-           ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_DODGE, ACTION_NONE]
+           ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_LEFT, ACTION_RIGHT]
 ATTACKS = [ACTION_PUNCH, ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK]
 
 ORIENTATION_LEFT, ORIENTATION_RIGHT = -1, 1
@@ -28,11 +27,12 @@ MOVES = {
     ACTION_RIGHT: (1, ORIENTATION_RIGHT),
 }
 
-REWARD_WIN = 50
-REWARD_WALL = -1
-REWARD_HIT = 5
-REWARD_MOVE = -1
-REWARD_NONE = -1
+REWARD_WIN = 100
+REWARD_WALL = -2
+REWARD_HIT = 10
+REWARD_GET_HIT = -20
+REWARD_MOVE = -2
+REWARD_NONE = -2
 HIT_DAMAGE = 10
 
 DISTANCE_NONE, DISTANCE_NEAR, DISTANCE_MID, DISTANCE_FAR = '0', 'N', 'M', 'F'
@@ -96,7 +96,7 @@ class LogicEnvironment:
     LEFT_WALL = 0
     RIGHT_WALL = GRID_LIMIT - 1
 
-    def __init__(self, learning_rate=0.8, discount_factor=0.5):
+    def __init__(self, learning_rate=LEARNING_RATE, discount_factor=DISCOUNT_FACTOR):
         self.positions = {
             RYU: RYU_START,
             KEN: KEN_START,
@@ -185,7 +185,7 @@ class LogicEnvironment:
         return target != WALL and target != '_'
 
     def reset_player_stance(self, player):
-        if self.stances == STANCE_STANDING:
+        if self.stances[player] == STANCE_STANDING:
             return
         previous_action = self.agents[player].previous_actions[1]
         if previous_action == ACTION_JUMP or previous_action == ACTION_CROUCH:
@@ -195,7 +195,6 @@ class LogicEnvironment:
         reward = 0
         opponent = self.opponent(player)
         last_opponent_action = self.agents[opponent].previous_actions[0]
-        damage_inflicted = False
         action = self.agents[player].current_action
 
         self.reset_player_stance(player)
@@ -209,21 +208,15 @@ class LogicEnvironment:
         if action in ATTACKS:
             if self.is_within_range(player, action):
                 reward += REWARD_HIT
-                damage_inflicted = True
+                self.inflict_damage_to(self.opponent(player))
             else:
                 reward += REWARD_NONE
 
         if action == ACTION_DODGE:
-            if last_opponent_action in ATTACKS and self.is_within_range(opponent, last_opponent_action):
-                reward -= REWARD_NONE
-            else:
-                reward += REWARD_NONE
+            reward += REWARD_NONE
 
         if action == ACTION_NONE:
             reward += REWARD_NONE
-
-        if damage_inflicted:
-            self.inflict_damage_to(self.opponent(player))
 
         return reward, self.get_radar(player)
 
@@ -238,8 +231,8 @@ class LogicEnvironment:
 
 
 class LogicAgent:
-    def __init__(self, environment, player_name, learning_rate=1.0, discount_factor=1.0, noise=0):
-        self.noise = 1
+    def __init__(self, environment, player_name, learning_rate=LEARNING_RATE, discount_factor=DISCOUNT_FACTOR, noise=0):
+        self.noise = noise
         self.orientation = environment.orientations[player_name]
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
@@ -260,12 +253,23 @@ class LogicAgent:
                 self.qtable = pickle.load(file)
             self.reset()
 
+    def print_qtable(self):
+        print('---' + self.player_name + ' QTABLE ---')
+        for state, actions in self.qtable.items():
+            positives_actions = dict([(a, p) for (a, p) in actions.items() if p > 0.0])
+            if len(positives_actions) != 0:
+                print(state, end=': ')
+                max_action = max(positives_actions, key=positives_actions.get)
+                print(f'{max_action}: {actions[max_action]}', end=', ')
+                print('')
+        print('----------------')
+
     def facing(self):
         return self.orientation == ORIENTATION_LEFT
 
     def reset(self):
         self.orientation = self.env.orientations[self.player_name]
-        self.state = self.env.radars[self.player_name]
+        self.state = self.env.get_radar(self.player_name)
         self.health = 100
         self.score = 0
 
@@ -307,6 +311,7 @@ class LogicAgent:
 
     def get_hit(self):
         self.health -= HIT_DAMAGE
+        # self.score += REWARD_GET_HIT
 
     def is_dead(self):
         return self.health <= 0
@@ -327,7 +332,7 @@ class LogicAgent:
 
 
 class Game:
-    def __init__(self, learning_rate=0.8, discount_factor=0.8):
+    def __init__(self, learning_rate=LEARNING_RATE, discount_factor=DISCOUNT_FACTOR):
         self.player_list = None
         self.max_wins = MAX_WIN
         self.ryu_wins = 0
@@ -383,12 +388,20 @@ class Game:
     def end_game(self):
         # self.wins = self.max_wins
         self.env.reset()
+        plt.figure(1)
         plt.plot(self.ryu_score, label="Ryu")
+        plt.legend()
+        plt.savefig(f"graphs/RYU_{self.wins}_l_{self.learning_rate}_d_{self.discount_factor}.png")
+
+        plt.figure(2)
         plt.plot(self.ken_score, label="Ken")
+        plt.legend()
+        plt.savefig(f"graphs/KEN_{self.wins}_l_{self.learning_rate}_d_{self.discount_factor}.png")
+
+        print(len(self.Ken.qtable))
+
         self.Ryu.save("RyuQtable.qtable")
         self.Ken.save("KenQtable.qtable")
-        print(f"Ryu wins: {self.ryu_wins}, Ken wins: {self.ken_wins}")
-
-        plt.legend()
-        plt.savefig(f"graphs/{self.wins}_{self.learning_rate}_d_{self.discount_factor}.png")
+        print(f"Ryu wins: {self.ryu_wins}, Ken wins: {self.ken_wins}")        
+        
         self.exit_game = True
