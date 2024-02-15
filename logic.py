@@ -1,5 +1,4 @@
 import pickle
-import sys
 from os.path import exists
 
 from matplotlib import pyplot as plt
@@ -8,7 +7,7 @@ from random import random, choice
 LEARNING_RATE = 0.6
 DISCOUNT_FACTOR = 0.25
 NOISE = 0.2
-MAX_WIN = 100_000
+MAX_WIN = 5_000
 
 RYU = "Ryu"
 KEN = "Ken"
@@ -16,7 +15,8 @@ PLAYERS = [RYU, KEN]
 
 ACTION_LEFT, ACTION_RIGHT, ACTION_JUMP, ACTION_CROUCH, ACTION_DODGE, ACTION_NONE = 'L', 'R', 'J', 'C', 'D', 'N'
 ACTION_PUNCH, ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK = 'P', 'HP', 'LP', 'LK', 'HK'
-ACTIONS = [ACTION_NONE, ACTION_DODGE, ACTION_JUMP, ACTION_CROUCH, ACTION_PUNCH, ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH,
+ACTIONS = [ACTION_NONE, ACTION_DODGE, ACTION_JUMP, ACTION_CROUCH, ACTION_PUNCH,
+           # ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH,
            ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_LEFT, ACTION_RIGHT]
 ATTACKS = [ACTION_PUNCH, ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK]
 
@@ -27,13 +27,13 @@ MOVES = {
     ACTION_RIGHT: (1, ORIENTATION_RIGHT),
 }
 
-REWARD_WIN = 10
+REWARD_WIN = 100
 REWARD_WALL = -2
-REWARD_HIT = -1
+REWARD_HIT = 10
 REWARD_GET_HIT = -20
 REWARD_MOVE = -2
 REWARD_NONE = -2
-HIT_DAMAGE = 100
+HIT_DAMAGE = 10
 
 DISTANCE_NONE, DISTANCE_NEAR, DISTANCE_MID, DISTANCE_FAR = '0', 'N', 'M', 'F'
 DISTANCES = {
@@ -255,14 +255,13 @@ class LogicAgent:
 
     def print_qtable(self):
         print('---' + self.player_name + ' QTABLE ---')
-        for state,actions in self.qtable.items():
-            positives_actions = dict([(a,p) for (a,p) in actions.items() if p > 0.0])
-            if(len(positives_actions) == 0): 
-               continue
-            print(state, end=': ')
-            max_action = max(positives_actions, key=positives_actions.get)
-            print(f'{max_action}: {actions[max_action]}', end=', ')
-            print('')
+        for state, actions in self.qtable.items():
+            positives_actions = dict([(a, p) for (a, p) in actions.items() if p > 0.0])
+            if len(positives_actions) != 0:
+                print(state, end=': ')
+                max_action = max(positives_actions, key=positives_actions.get)
+                print(f'{max_action}: {actions[max_action]}', end=', ')
+                print('')
         print('----------------')
 
     def facing(self):
@@ -270,7 +269,7 @@ class LogicAgent:
 
     def reset(self):
         self.orientation = self.env.orientations[self.player_name]
-        self.state = self.env.radars[self.player_name]
+        self.state = self.env.get_radar(self.player_name)
         self.health = 100
         self.score = 0
 
@@ -312,7 +311,7 @@ class LogicAgent:
 
     def get_hit(self):
         self.health -= HIT_DAMAGE
-        self.score += REWARD_GET_HIT
+        # self.score += REWARD_GET_HIT
 
     def is_dead(self):
         return self.health <= 0

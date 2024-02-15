@@ -139,6 +139,6 @@ class Graphic(arcade.Window, Game):
 
 if __name__ == '__main__':
     window = Graphic()
-    window.set_update_rate(1 / 999999)
+    window.set_update_rate(1 / 99999999)
     window.setup()
     window.run()
