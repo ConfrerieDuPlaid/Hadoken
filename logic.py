@@ -7,7 +7,7 @@ from random import random, choice
 LEARNING_RATE = 0.6
 DISCOUNT_FACTOR = 0.25
 NOISE = 0.2
-MAX_WIN = 10_000
+MAX_WIN = 50_000
 
 RYU = "Ryu"
 KEN = "Ken"
@@ -27,11 +27,11 @@ MOVES = {
     ACTION_RIGHT: (1, ORIENTATION_RIGHT),
 }
 
-REWARD_WIN = 1000
-REWARD_COMBO = 500
+REWARD_WIN = 100
+REWARD_COMBO = 20
 REWARD_WALL = -2
-REWARD_HIT = 100
-REWARD_GET_HIT = -20
+REWARD_HIT = 10
+# REWARD_GET_HIT = -20
 REWARD_MOVE = -2
 REWARD_NONE = -2
 HIT_DAMAGE = 10
@@ -373,8 +373,8 @@ class Game:
             if self.Ryu.is_dead():
                 self.Ken.win()
                 self.ken_wins += 1
-                self.ken_score.append(self.Ken.get_score())
                 # self.display_victory(KEN)
+                self.ken_score.append(self.Ken.get_score())
             else:
                 self.Ryu.win()
                 self.ryu_wins += 1

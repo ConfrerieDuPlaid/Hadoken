@@ -4,7 +4,7 @@ from logic import *
 
 
 class Environment(LogicEnvironment):
-    def __init__(self, learning_rate=1.0, discount_factor=1.0):
+    def __init__(self, learning_rate, discount_factor):
         super().__init__(learning_rate, discount_factor)
         self.agents = {
             RYU: Agent(self, RYU, learning_rate, discount_factor),
