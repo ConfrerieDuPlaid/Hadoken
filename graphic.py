@@ -27,7 +27,7 @@ ANIMATIONS_LIST = list(ANIMATIONS.keys())
 
 
 class Environment(LogicEnvironment):
-    def __init__(self, learning_rate=0.80, discount_factor=0.80):
+    def __init__(self, learning_rate=0.8, discount_factor=0.25):
         super().__init__(learning_rate, discount_factor)
         self.agents = {
             KEN: Agent(self, KEN, learning_rate, discount_factor),
@@ -36,7 +36,7 @@ class Environment(LogicEnvironment):
 
 
 class Agent(arcade.Sprite, LogicAgent):
-    def __init__(self, environment, player_name, learning_rate=0.80, discount_factor=0.80):
+    def __init__(self, environment, player_name, learning_rate=0.8, discount_factor=0.25):
         arcade.Sprite.__init__(self)
         LogicAgent.__init__(self, environment, player_name, learning_rate, discount_factor)
         self.cur_texture = 0
@@ -68,7 +68,7 @@ class Agent(arcade.Sprite, LogicAgent):
 
 
 class Graphic(arcade.Window, Game):
-    def __init__(self, learning_rate=0.80, discount_factor=0.80):
+    def __init__(self, learning_rate=0.8, discount_factor=0.25):
         arcade.Window.__init__(self, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         Game.__init__(self, learning_rate, discount_factor)
         self.gui_camera = None
@@ -109,15 +109,15 @@ class Graphic(arcade.Window, Game):
         self.player_list.draw()
         arcade.draw_text(
             f'Iterations : {self.iterations} Ryu Score: {self.Ryu.get_score()} Ken Score: {self.Ken.get_score()} Total wins : {self.ryu_wins + self.ken_wins}',
-            10, 10, arcade.color.RED, 20, bold=True)
+            10, 10, arcade.color.BLACK, 20, bold=True)
         arcade.draw_text(
-            f'Ryu hp : {self.Ryu.health} Key hp: {self.Ken.health}', 10, 40, arcade.color.RED, 20, bold=True)
+            f'Ryu hp : {self.Ryu.health} Key hp: {self.Ken.health}', 10, 40, arcade.color.BLACK, 20, bold=True)
         arcade.draw_text(
-            f'Ryu noise : {self.Ryu.noise} Key noise: {self.Ken.noise}', 10, 60, arcade.color.RED, 20, bold=True)
+            f'Ryu noise : {self.Ryu.noise} Key noise: {self.Ken.noise}', 10, 60, arcade.color.BLACK, 20, bold=True)
         arcade.draw_text(
-            f'Ryu state : {self.Ryu.state} ', 10, SCREEN_HEIGHT - 40, arcade.color.RED, 20, bold=True)
+            f'Ryu state : {self.Ryu.state} ', 10, SCREEN_HEIGHT - 40, arcade.color.BLACK, 20, bold=True)
         arcade.draw_text(
-            f'Ken state : {self.Ken.state} ', 10, SCREEN_HEIGHT - 80, arcade.color.RED, 20, bold=True)
+            f'Ken state : {self.Ken.state} ', 10, SCREEN_HEIGHT - 80, arcade.color.BLACK, 20, bold=True)
 
     def on_update(self, delta_time: float):
         player_start = super().round()

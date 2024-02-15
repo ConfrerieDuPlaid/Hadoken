@@ -7,8 +7,8 @@ from random import random, choice
 
 LEARNING_RATE = 0.6
 DISCOUNT_FACTOR = 0.25
-NOISE = 0.2
-MAX_WIN = 5_000
+NOISE = 1
+MAX_WIN = 100000
 
 RYU = "Ryu"
 KEN = "Ken"
@@ -16,7 +16,8 @@ PLAYERS = [RYU, KEN]
 
 ACTION_LEFT, ACTION_RIGHT, ACTION_JUMP, ACTION_CROUCH, ACTION_DODGE, ACTION_NONE = 'L', 'R', 'J', 'C', 'D', 'N'
 ACTION_PUNCH, ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK = 'P', 'HP', 'LP', 'LK', 'HK'
-ACTIONS = [ACTION_LEFT, ACTION_RIGHT, ACTION_JUMP, ACTION_CROUCH, ACTION_PUNCH, ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH,
+ACTIONS = [ACTION_LEFT, ACTION_RIGHT, ACTION_JUMP, ACTION_CROUCH, ACTION_PUNCH,
+           # ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH,
            ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_DODGE, ACTION_NONE]
 ATTACKS = [ACTION_PUNCH, ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK]
 
@@ -28,10 +29,10 @@ MOVES = {
 }
 
 REWARD_WIN = 50
-REWARD_WALL = -2
+REWARD_WALL = -1
 REWARD_HIT = 5
-REWARD_MOVE = -2
-REWARD_NONE = -2
+REWARD_MOVE = -1
+REWARD_NONE = -1
 HIT_DAMAGE = 10
 
 DISTANCE_NONE, DISTANCE_NEAR, DISTANCE_MID, DISTANCE_FAR = '0', 'N', 'M', 'F'
@@ -216,7 +217,7 @@ class LogicEnvironment:
             if last_opponent_action in ATTACKS and self.is_within_range(opponent, last_opponent_action):
                 reward -= REWARD_NONE
             else:
-                reward += REWARD_NONE * 2
+                reward += REWARD_NONE
 
         if action == ACTION_NONE:
             reward += REWARD_NONE
@@ -237,8 +238,8 @@ class LogicEnvironment:
 
 
 class LogicAgent:
-    def __init__(self, environment, player_name, learning_rate=1, discount_factor=1, noise=0):
-        self.noise = 0
+    def __init__(self, environment, player_name, learning_rate=1.0, discount_factor=1.0, noise=0):
+        self.noise = 1
         self.orientation = environment.orientations[player_name]
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
@@ -269,10 +270,10 @@ class LogicAgent:
         self.score = 0
 
     def choose_action(self):
-        if random() < self.noise:
-            self.noise *= 0.999
-            self.current_action = choice(ACTIONS)
-            return
+        # if random() < self.noise:
+        #     self.noise *= 0.99999
+        #     self.current_action = choice(ACTIONS)
+        #     return
         self.add_qtable_state(self.state)
         self.current_action = arg_max(self.qtable[self.state])
 
