@@ -8,7 +8,7 @@ from random import random, choice
 LEARNING_RATE = 0.6
 DISCOUNT_FACTOR = 0.25
 NOISE = 0.2
-MAX_WIN = 500
+MAX_WIN = 100_000
 
 RYU = "Ryu"
 KEN = "Ken"
