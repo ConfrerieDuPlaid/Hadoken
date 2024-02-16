@@ -162,12 +162,32 @@ class Graphic(arcade.Window, Game):
         arcade.draw_text(
             f'Ken state : {self.Ken.state} ', 10, SCREEN_HEIGHT - 2 * SCREEN_HEIGHT_SPACER, arcade.color.BLACK, 20, bold=True)
 
+    def draw_radars(self):
+        self.draw_radar_of(RYU, arcade.color.RED)
+        self.draw_radar_of(KEN, arcade.color.BLUE, SPRITE_SIZE/2 + 10)
+
+    def draw_radar_of(self, player, color, height_offset=0):
+        agent = self.env.agents[player]
+        radar = self.env.get_radar(player)
+
+        position = self.env.positions[player]
+        center_x = position * SPRITE_SIZE + SPRITE_SIZE / 2
+        center_y = SPRITE_SIZE + SPRITE_SIZE / 2
+        y = center_y + height_offset
+        for i in range(-3, 4):
+            if(i == 0) : continue
+            x = center_x + SPRITE_SIZE * i
+            arcade.draw_rectangle_outline(x, y, SPRITE_SIZE, SPRITE_SIZE/2, color)
+            arcade.draw_text(radar[3+i], x, y, color)
+
+        
 
     def on_draw(self):
         self.clear()
         self.wall_list.draw()
         self.player_list.draw()
         self.draw_texts()
+        self.draw_radars()
 
     def on_update(self, delta_time: float):
         player_start = super().round()
