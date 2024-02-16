@@ -27,10 +27,7 @@ MOVES = {
 }
 
 REWARD_WIN = 100
-REWARD_WALL = -2
 REWARD_HIT = 10
-REWARD_GET_HIT = -20
-REWARD_MOVE = -2
 REWARD_NONE = -2
 HIT_DAMAGE = 10
 
@@ -168,17 +165,15 @@ class LogicEnvironment:
         move_delta, self.orientations[player] = MOVES[move]
         self.agents[player].orientation = self.orientations[player]
         if radar[3 + move_delta] == WALL:
-            return REWARD_WALL
+            return REWARD_NONE
         self.positions[player] += move_delta
-        return REWARD_MOVE
+        return REWARD_NONE
 
     def is_within_range(self, attacker, attack):
         player_stance = self.stances[attacker]
         opponent_stance = self.stances[self.opponent(attacker)]
         if attack not in STANCE_HIT_MAP[player_stance][opponent_stance]:
             return False
-        # if self.positions[attacker] == self.positions[self.opponent(attacker)]:
-        #     return True
         radar = self.get_radar(attacker)
         target = radar[3 + self.orientations[attacker]]
         return target != WALL and target != '_'
@@ -192,8 +187,6 @@ class LogicEnvironment:
 
     def do(self, player):
         reward = 0
-        opponent = self.opponent(player)
-        last_opponent_action = self.agents[opponent].previous_actions[0]
         action = self.agents[player].current_action
 
         self.reset_player_stance(player)
@@ -202,7 +195,7 @@ class LogicEnvironment:
 
         if action in STANCE_CHANGES:
             self.stances[player] = STANCE_CHANGES[action]
-            reward += REWARD_MOVE
+            reward += REWARD_NONE
 
         if action in ATTACKS:
             if self.is_within_range(player, action):
@@ -311,7 +304,6 @@ class LogicAgent:
 
     def get_hit(self):
         self.health -= HIT_DAMAGE
-        # self.score += REWARD_GET_HIT
 
     def is_dead(self):
         return self.health <= 0
@@ -388,7 +380,6 @@ class Game:
         return player_start
 
     def end_game(self):
-        # self.wins = self.max_wins
         self.env.reset()
         if not self.play_mode:
             plt.figure(1)
