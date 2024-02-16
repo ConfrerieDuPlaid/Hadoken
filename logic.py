@@ -6,7 +6,7 @@ from random import random, choice
 
 LEARNING_RATE = 0.8
 DISCOUNT_FACTOR = 0.8
-NOISE = 0.2
+NOISE = 1
 MAX_WIN = 100_000
 
 RYU = "Ryu"
@@ -16,7 +16,6 @@ PLAYERS = [RYU, KEN]
 ACTION_LEFT, ACTION_RIGHT, ACTION_JUMP, ACTION_CROUCH, ACTION_DODGE, ACTION_NONE = 'L', 'R', 'J', 'C', 'D', 'N'
 ACTION_PUNCH, ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK = 'P', 'HP', 'LP', 'LK', 'HK'
 ACTIONS = [ACTION_NONE, ACTION_DODGE, ACTION_JUMP, ACTION_CROUCH, ACTION_PUNCH,
-           # ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH,
            ACTION_LOW_KICK, ACTION_HIGH_KICK, ACTION_LEFT, ACTION_RIGHT]
 ATTACKS = [ACTION_PUNCH, ACTION_HIGH_PUNCH, ACTION_LOW_PUNCH, ACTION_LOW_KICK, ACTION_HIGH_KICK]
 
@@ -231,8 +230,9 @@ class LogicEnvironment:
 
 
 class LogicAgent:
-    def __init__(self, environment, player_name, learning_rate=LEARNING_RATE, discount_factor=DISCOUNT_FACTOR, noise=0):
+    def __init__(self, environment, player_name, learning_rate=LEARNING_RATE, discount_factor=DISCOUNT_FACTOR, noise=0, play_mode=False):
         self.noise = noise
+        self.play_mode = play_mode
         self.orientation = environment.orientations[player_name]
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
@@ -274,10 +274,10 @@ class LogicAgent:
         self.score = 0
 
     def choose_action(self):
-        # if random() < self.noise:
-        #     self.noise *= 0.99999
-        #     self.current_action = choice(ACTIONS)
-        #     return
+        if random() < self.noise:
+            self.noise *= 0.9999
+            self.current_action = choice(ACTIONS)
+            return
         self.add_qtable_state(self.state)
         self.current_action = arg_max(self.qtable[self.state])
 
@@ -288,11 +288,11 @@ class LogicAgent:
                 self.qtable[state][a] = 0.0
 
     def update_qtable(self, reward, prev_state, new_state):
-        self.add_qtable_state(prev_state)
-        self.add_qtable_state(new_state)
-        max_q = max(self.qtable[new_state].values())
-        self.qtable[prev_state][self.current_action] += self.learning_rate * (
-                reward + self.discount_factor * max_q - self.qtable[prev_state][self.current_action])
+        if not self.play_mode:
+            self.add_qtable_state(prev_state)
+            self.add_qtable_state(new_state)
+            max_q = max(self.qtable[new_state].values())
+            self.qtable[prev_state][self.current_action] += self.learning_rate * (reward + self.discount_factor * max_q - self.qtable[prev_state][self.current_action])
 
     def do(self):
         self.choose_action()
@@ -332,7 +332,8 @@ class LogicAgent:
 
 
 class Game:
-    def __init__(self, learning_rate=LEARNING_RATE, discount_factor=DISCOUNT_FACTOR):
+    def __init__(self, learning_rate=LEARNING_RATE, discount_factor=DISCOUNT_FACTOR, play_mode=False):
+        self.play_mode = play_mode
         self.player_list = None
         self.max_wins = MAX_WIN
         self.ryu_wins = 0
@@ -358,7 +359,8 @@ class Game:
 
         self.Ryu = self.env.agents[RYU]
         self.Ryu.set_position()
-#         self.Ryu.load_qtable("RyuQtable.qtable")
+
+    #         self.Ryu.load_qtable("RyuQtable.qtable")
 
     def check_end_game(self):
         if self.Ryu.is_dead() or self.Ken.is_dead():
@@ -388,20 +390,19 @@ class Game:
     def end_game(self):
         # self.wins = self.max_wins
         self.env.reset()
-        plt.figure(1)
-        plt.plot(self.ryu_score, label="Ryu")
-        plt.legend()
-        plt.savefig(f"graphs/RYU_{self.wins}_l_{self.learning_rate}_d_{self.discount_factor}.png")
+        if not self.play_mode:
+            plt.figure(1)
+            plt.plot(self.ryu_score, label="Ryu")
+            plt.legend()
+            plt.savefig(f"graphs/RYU_{self.wins}_l_{self.learning_rate}_d_{self.discount_factor}.png")
 
-        plt.figure(2)
-        plt.plot(self.ken_score, label="Ken")
-        plt.legend()
-        plt.savefig(f"graphs/KEN_{self.wins}_l_{self.learning_rate}_d_{self.discount_factor}.png")
+            plt.figure(2)
+            plt.plot(self.ken_score, label="Ken")
+            plt.legend()
+            plt.savefig(f"graphs/KEN_{self.wins}_l_{self.learning_rate}_d_{self.discount_factor}.png")
 
-        print(len(self.Ken.qtable))
+            self.Ryu.save("RyuQtable.qtable")
+            self.Ken.save("KenQtable.qtable")
+        print(len(self.Ryu.qtable))
 
-        self.Ryu.save("RyuQtable.qtable")
-        self.Ken.save("KenQtable.qtable")
-        print(f"Ryu wins: {self.ryu_wins}, Ken wins: {self.ken_wins}")        
-        
         self.exit_game = True

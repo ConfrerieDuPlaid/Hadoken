@@ -1,3 +1,5 @@
+import sys
+
 import arcade
 from logic import *
 
@@ -31,7 +33,7 @@ ANIMATIONS_LIST = list(ANIMATIONS.keys())
 
 
 class Environment(LogicEnvironment):
-    def __init__(self, learning_rate, discount_factor):
+    def __init__(self, learning_rate, discount_factor, play_mode=False):
         super().__init__(learning_rate, discount_factor)
         self.agents = {
             KEN: Agent(self, KEN, learning_rate, discount_factor),
@@ -44,7 +46,7 @@ class Environment(LogicEnvironment):
 class Agent(arcade.Sprite, LogicAgent):
     def __init__(self, environment, player_name, learning_rate, discount_factor):
         arcade.Sprite.__init__(self)
-        LogicAgent.__init__(self, environment, player_name, learning_rate, discount_factor)
+        LogicAgent.__init__(self, environment, player_name, learning_rate, discount_factor, play_mode=False)
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.cur_texture = 0
@@ -53,7 +55,7 @@ class Agent(arcade.Sprite, LogicAgent):
         self.animations = []
         self.load_textures(player_name)
         self.textures = self.animations
-        self.noise = 1
+        self.noise = 0
 
     def load_textures(self, player_name):
         textures_path = f"./tiles/{player_name}/{player_name}"
@@ -76,11 +78,12 @@ class Agent(arcade.Sprite, LogicAgent):
 
 
 class Graphic(arcade.Window, Game):
-    def __init__(self, learning_rate=LEARNING_RATE, discount_factor=DISCOUNT_FACTOR):
+    def __init__(self, learning_rate=LEARNING_RATE, discount_factor=DISCOUNT_FACTOR, play_mode=False):
         arcade.Window.__init__(self, SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-        Game.__init__(self, learning_rate, discount_factor)
+        Game.__init__(self, learning_rate, discount_factor, play_mode)
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
+        self.play_mode = play_mode
         self.gui_camera = None
         self.camera = None
         self.scene = None
@@ -97,7 +100,7 @@ class Graphic(arcade.Window, Game):
             self.wall_list.append(wall)
 
     def setup(self):
-        self.env = Environment(self.learning_rate, self.discount_factor)
+        self.env = Environment(self.learning_rate, self.discount_factor, self.play_mode)
 
         self.Ken = self.env.agents[KEN]
         self.Ken.set_position()
@@ -189,7 +192,10 @@ class Graphic(arcade.Window, Game):
 
 
 if __name__ == '__main__':
-    window = Graphic()
+    play_mode = False
+    if len(sys.argv) == 2:
+        play_mode = bool(sys.argv[1])
+    window = Graphic(play_mode=play_mode)
     window.set_update_rate(1 / WINDOW_VELOCITY_MAX)
     window.setup()
     window.run()
