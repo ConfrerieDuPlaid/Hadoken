@@ -104,11 +104,11 @@ class Graphic(arcade.Window, Game):
 
         self.Ken = self.env.agents[KEN]
         self.Ken.set_position()
-        # self.Ken.load_qtable("KenQtable.qtable")
+        self.Ken.load_qtable("KenQtable.qtable")
 
         self.Ryu = self.env.agents[RYU]
         self.Ryu.set_position()
-        # self.Ryu.load_qtable("RyuQtable.qtable")
+        self.Ryu.load_qtable("RyuQtable.qtable")
 
         self.player_list = arcade.SpriteList()
         self.player_list.append(self.Ryu)
