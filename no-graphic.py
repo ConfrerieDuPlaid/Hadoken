@@ -2,7 +2,6 @@ import sys
 
 from logic import *
 
-
 class Environment(LogicEnvironment):
     def __init__(self, learning_rate, discount_factor):
         super().__init__(learning_rate, discount_factor)

@@ -43,10 +43,10 @@ class MonJeu(arcade.Window):
         self.sprite.textures = self.sprite.animations
 
     def on_draw(self):
-        arcade.start_render()
+        self.clear()
         self.sprite.draw()
 
-    def update(self, delta_time):
+    def on_update(self, delta_time):
         if self.anim > 6:
             self.anim = 0
         else:
@@ -58,7 +58,7 @@ def main():
     jeu = MonJeu(LARGEUR_FENETRE, HAUTEUR_FENETRE, TITRE_FENETRE)
     jeu.setup()
     jeu.set_update_rate(1 / 15)
-    arcade.run()
+    jeu.run()
 
 
 if __name__ == "__main__":

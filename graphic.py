@@ -115,6 +115,45 @@ class Graphic(arcade.Window, Game):
         self.player_list.append(self.Ken)
 
         self.create_scene()
+        self.create_text_objects()
+
+    def create_text_objects(self):
+        text_args = dict(font_size=20, bold=True)
+
+        # Top-right stats (4 lines)
+        self.top_right_texts = [
+            arcade.Text("", SCREEN_WIDTH - 300, SCREEN_HEIGHT - SCREEN_HEIGHT_SPACER * (i + 1),
+                        color=arcade.color.BLACK, **text_args)
+            for i in range(4)
+        ]
+
+        # Ryu vitals (bottom-right, 3 lines)
+        self.ryu_vital_texts = [
+            arcade.Text("", SCREEN_WIDTH - 400, 10 + i * SCREEN_HEIGHT_SPACER,
+                        color=arcade.color.BLACK, **text_args)
+            for i in range(3)
+        ]
+
+        # Ken vitals (bottom-left, 3 lines)
+        self.ken_vital_texts = [
+            arcade.Text("", 10, 10 + i * SCREEN_HEIGHT_SPACER,
+                        color=arcade.color.BLACK, **text_args)
+            for i in range(3)
+        ]
+
+        # State labels
+        self.ryu_state_text = arcade.Text("", 10, SCREEN_HEIGHT - SCREEN_HEIGHT_SPACER,
+                                          color=arcade.color.BLACK, **text_args)
+        self.ken_state_text = arcade.Text("", 10, SCREEN_HEIGHT - 2 * SCREEN_HEIGHT_SPACER,
+                                          color=arcade.color.BLACK, **text_args)
+
+        # Radar texts: 6 per player (indices -3..-1, 1..3)
+        self.ryu_radar_texts = [
+            arcade.Text("", 0, 0, color=arcade.color.RED) for _ in range(6)
+        ]
+        self.ken_radar_texts = [
+            arcade.Text("", 0, 0, color=arcade.color.BLUE) for _ in range(6)
+        ]
 
     def win_rate(self, wins):
         total_wins = self.ryu_wins + self.ken_wins
@@ -122,65 +161,66 @@ class Graphic(arcade.Window, Game):
             return 0
         return round(100 * wins / total_wins, 2)
 
-    def draw_top_right_texts(self):
-        to_print = [
+    def draw_texts(self):
+        # Top-right stats
+        values = [
             f'Ken win rate : {self.win_rate(self.ken_wins)} %',
             f'Ryu win rate : {self.win_rate(self.ryu_wins)} %',
             f'Iterations : {self.iterations}',
-            f'Total wins : {self.ryu_wins + self.ken_wins}'
+            f'Total wins : {self.ryu_wins + self.ken_wins}',
         ]
-        for i in range(len(to_print)):
-            arcade.draw_text(
-                to_print[i], SCREEN_WIDTH - 300, SCREEN_HEIGHT - SCREEN_HEIGHT_SPACER * (i+1), arcade.color.BLACK, 20, bold=True)
+        for text_obj, value in zip(self.top_right_texts, values):
+            text_obj.text = value
+            text_obj.draw()
 
-    def print_ryu_vitals(self):
-        to_print = [
+        # Ryu vitals
+        ryu_values = [
             f'Ryu noise : {self.Ryu.noise}',
             f'Ryu Score: {self.Ryu.get_score()}',
             f'Ryu hp : {self.Ryu.health}',
         ]
-        for i in range(len(to_print)):
-            arcade.draw_text(
-                to_print[i], SCREEN_WIDTH - 400, 10 + i * SCREEN_HEIGHT_SPACER, arcade.color.BLACK, 20, bold=True)
+        for text_obj, value in zip(self.ryu_vital_texts, ryu_values):
+            text_obj.text = value
+            text_obj.draw()
 
-    def print_ken_vitals(self):
-        to_print = [
+        # Ken vitals
+        ken_values = [
             f'Ken noise : {self.Ken.noise}',
             f'Ken Score: {self.Ken.get_score()}',
             f'Ken hp : {self.Ken.health}',
         ]
-        for i in range(len(to_print)):
-            arcade.draw_text(
-                to_print[i], 10, 10 + i * SCREEN_HEIGHT_SPACER, arcade.color.BLACK, 20, bold=True)
+        for text_obj, value in zip(self.ken_vital_texts, ken_values):
+            text_obj.text = value
+            text_obj.draw()
 
-    def draw_texts(self):
-        self.draw_top_right_texts()
-        self.print_ryu_vitals()
-        self.print_ken_vitals()
-        arcade.draw_text(
-            f'Ryu state : {self.Ryu.state} ', 10, SCREEN_HEIGHT - SCREEN_HEIGHT_SPACER, arcade.color.BLACK, 20, bold=True)
-        arcade.draw_text(
-            f'Ken state : {self.Ken.state} ', 10, SCREEN_HEIGHT - 2 * SCREEN_HEIGHT_SPACER, arcade.color.BLACK, 20, bold=True)
+        # State labels
+        self.ryu_state_text.text = f'Ryu state : {self.Ryu.state} '
+        self.ryu_state_text.draw()
+        self.ken_state_text.text = f'Ken state : {self.Ken.state} '
+        self.ken_state_text.draw()
 
     def draw_radars(self):
-        self.draw_radar_of(RYU, arcade.color.RED)
-        self.draw_radar_of(KEN, arcade.color.BLUE, SPRITE_SIZE/2 + 10)
+        self.draw_radar_of(RYU, self.ryu_radar_texts)
+        self.draw_radar_of(KEN, self.ken_radar_texts, SPRITE_SIZE / 2 + 10)
 
-    def draw_radar_of(self, player, color, height_offset=0):
-        agent = self.env.agents[player]
+    def draw_radar_of(self, player, radar_texts, height_offset=0):
         radar = self.env.get_radar(player)
-
         position = self.env.positions[player]
         center_x = position * SPRITE_SIZE + SPRITE_SIZE / 2
-        center_y = SPRITE_SIZE + SPRITE_SIZE / 2
-        y = center_y + height_offset
-        for i in range(-3, 4):
-            if(i == 0) : continue
-            x = center_x + SPRITE_SIZE * i
-            arcade.draw_rectangle_outline(x, y, SPRITE_SIZE, SPRITE_SIZE/2, color)
-            arcade.draw_text(radar[3+i], x, y, color)
+        y = SPRITE_SIZE + SPRITE_SIZE / 2 + height_offset
+        color = radar_texts[0].color
 
-        
+        idx = 0
+        for i in range(-3, 4):
+            if i == 0:
+                continue
+            x = center_x + SPRITE_SIZE * i
+            arcade.draw_rect_outline(arcade.XYWH(x, y, SPRITE_SIZE, SPRITE_SIZE / 2), color)
+            radar_texts[idx].text = str(radar[3 + i])
+            radar_texts[idx].x = x
+            radar_texts[idx].y = y
+            radar_texts[idx].draw()
+            idx += 1
 
     def on_draw(self):
         self.clear()
