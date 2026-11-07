@@ -1,13 +1,15 @@
+import os
 import pickle
 from os.path import exists
 
-from matplotlib import pyplot as plt
+from matplotlib.figure import Figure
 from random import random, choice
 
 LEARNING_RATE = 0.8
 DISCOUNT_FACTOR = 0.8
 NOISE = 1
 MAX_WIN = 100_000
+GRAPHS_DIR = "graphs"
 
 RYU = "Ryu"
 KEN = "Ken"
@@ -341,18 +343,24 @@ class Game:
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.exit_game = False
+        # Suffixe des fichiers de Q-tables : vide pour les Q-tables partagées
+        # (mode graphique, no-graphic.py sans argument), propre à chaque run sinon.
+        self.qtable_suffix = ""
+
+    def qtable_path(self, player):
+        return f"{player}Qtable{self.qtable_suffix}.qtable"
 
     def setup(self):
         self.env = LogicEnvironment(self.learning_rate, self.discount_factor)
 
         self.Ken = self.env.agents[KEN]
         self.Ken.set_position()
-        self.Ken.load_qtable("KenQtable.qtable")
+        self.Ken.load_qtable(self.qtable_path(KEN))
 
         self.Ryu = self.env.agents[RYU]
         self.Ryu.set_position()
 
-        self.Ryu.load_qtable("RyuQtable.qtable")
+        self.Ryu.load_qtable(self.qtable_path(RYU))
 
     def check_end_game(self):
         if self.Ryu.is_dead() or self.Ken.is_dead():
@@ -382,18 +390,19 @@ class Game:
     def end_game(self):
         self.env.reset()
         if not self.play_mode:
-            plt.figure(1)
-            plt.plot(self.ryu_score, label="Ryu")
-            plt.legend()
-            plt.savefig(f"graphs/RYU_{self.wins}_l_{self.learning_rate}_d_{self.discount_factor}.png")
-
-            plt.figure(2)
-            plt.plot(self.ken_score, label="Ken")
-            plt.legend()
-            plt.savefig(f"graphs/KEN_{self.wins}_l_{self.learning_rate}_d_{self.discount_factor}.png")
-
-            self.Ryu.save("RyuQtable.qtable")
-            self.Ken.save("KenQtable.qtable")
+            # Les Q-tables d'abord : un souci sur les graphes ne doit pas faire perdre l'apprentissage
+            self.Ryu.save(self.qtable_path(RYU))
+            self.Ken.save(self.qtable_path(KEN))
+            self.save_score_graph(RYU, self.ryu_score)
+            self.save_score_graph(KEN, self.ken_score)
         print(len(self.Ryu.qtable))
 
         self.exit_game = True
+
+    def save_score_graph(self, player, scores):
+        os.makedirs(GRAPHS_DIR, exist_ok=True)
+        figure = Figure()
+        axes = figure.subplots()
+        axes.plot(scores, label=player)
+        axes.legend()
+        figure.savefig(f"{GRAPHS_DIR}/{player.upper()}_{self.wins}_l_{self.learning_rate}_d_{self.discount_factor}.png")
