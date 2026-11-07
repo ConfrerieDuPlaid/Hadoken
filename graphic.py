@@ -104,11 +104,11 @@ class Graphic(arcade.Window, Game):
 
         self.Ken = self.env.agents[KEN]
         self.Ken.set_position()
-        self.Ken.load_qtable("KenQtable.qtable")
+        self.Ken.load_qtable(self.qtable_path(KEN))
 
         self.Ryu = self.env.agents[RYU]
         self.Ryu.set_position()
-        self.Ryu.load_qtable("RyuQtable.qtable")
+        self.Ryu.load_qtable(self.qtable_path(RYU))
 
         self.player_list = arcade.SpriteList()
         self.player_list.append(self.Ryu)
@@ -239,16 +239,22 @@ class Graphic(arcade.Window, Game):
             self.end_game()
             exit(0)
 
+    def on_close(self):
+        # Appelé par la croix de la fenêtre et par la touche Q
+        if not self.exit_game:
+            self.end_game()
+        super().on_close()
+
     def on_key_press(self, key, modifiers):
         if key == arcade.key.Q:
-            self.end_game()
+            self.dispatch_event('on_close')
         if key == arcade.key.R:
             self.Ryu.noise = NOISE
             self.Ken.noise = NOISE
         if key == arcade.key.M:
-            window.set_update_rate(1 / WINDOW_VELOCITY_MIN)
+            self.set_update_rate(1 / WINDOW_VELOCITY_MIN)
         if key == arcade.key.P:
-            window.set_update_rate(1 / WINDOW_VELOCITY_MAX)
+            self.set_update_rate(1 / WINDOW_VELOCITY_MAX)
 
 
 if __name__ == '__main__':

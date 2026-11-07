@@ -33,13 +33,25 @@ python3 graphic.py
 
 `P` : Augmentation de la vitesse de la visualisation (mode d'apprentissage rapide) 
 
-`Q` : Fin de jeu
+`Q` : Fin de jeu (sauvegarde puis ferme la fenêtre, comme la croix)
+
+Les Q-tables (`RyuQtable.qtable`, `KenQtable.qtable`) et les courbes de score (`graphs/`) sont enregistrées à la fermeture.
 
 ## Mode ligne de commande
 
 ```
 python3 no-graphic.py
 ```
+
+Reprend et enrichit les mêmes Q-tables que le mode graphique. `Ctrl+C` sauvegarde avant de quitter.
+
+## Recherche d'hyperparamètres
+
+```
+python3 launch.py
+```
+
+Lance un `no-graphic.py` par couple (learning rate, discount factor). Chaque run apprend de zéro et enregistre ses Q-tables à part (par exemple `RyuQtable_l_0.4_d_0.2.qtable`), sans toucher aux Q-tables partagées.
 
 # Crédits
 
